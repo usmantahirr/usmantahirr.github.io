@@ -1,0 +1,44 @@
+{
+  "details": {
+    "fname": "Usman",
+    "lname": "Tahir",
+    "picture" : "https://graph.facebook.com/chusmantahir/picture?width=500",
+    "facebook": {
+      "link": "http://www.fb.com/chusmantahir",
+      "username": "chusmantahir",
+      "email": "chusmantahir@aol.com",
+      "fa-icon" : "fa-facebook-official"
+    },
+    "twitter": {
+      "link": "https://twitter.com/usman_tahirr",
+      "username": "usman_tahirr",
+      "email": "ch.usman.tahir@gmail.com",
+      "fa-icon" : "fa-twitter"
+    },
+    "linkedin":{
+      "link": "https://pk.linkedin.com/in/usmantahirr",
+      "username": "usmantahirr",
+      "email": "ch.usman.tahir@gmail.com",
+      "fa-icon" : "fa-linkedin"
+    },
+    "github": {
+      "link": "https://github.com/usmantahirr",
+      "username": "usmantahirr",
+      "email": "ch.usman.tahir@gmail.com",
+      "fa-icon" : "fa-github"
+    }
+  },
+  "technoligies": {
+    "languages": {
+      
+    },
+    "frameWorks": {},
+    "templating-engines": {},
+    "front-end-frameworks": {},
+    "dataBases": {},
+    "orms": {},
+    "version-control" : {},
+    "clouds-servers" : {},
+    "api" : {}
+  }
+}
