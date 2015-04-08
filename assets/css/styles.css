@@ -8,6 +8,7 @@ h1, h2, h3, h4 {
 body {
     font-family: 'Roboto Slab';
     margin-left: 5%;
+    margin-bottom: 5%;
 }
 
 /* LINKS */
@@ -42,7 +43,14 @@ span {
     width: 350px;
     border-bottom: 1px dotted black;
 }
+#contact {
+    padding: 20px 0 25px 0;
+}
 
+#contact span {
+    font-weight: bold;
+    color:#34495e;
+}
 #profile-links a {
     margin-top: 2px;
 }
@@ -57,4 +65,9 @@ span {
 /* TABLE */
 table, th, td {
     border: none;
+}
+
+.separator {
+    font-size: 0.5em;
+    margin: 0 4px 0 4px;
 }
