@@ -47,7 +47,7 @@ a {
 }
 
 .hero-unit {
-  background: url("images/hero-unit.jpg");
+  background: url("../images/hero-unit.jpg");
   background-size: cover;
   text-align: center;
   width: 100%;
