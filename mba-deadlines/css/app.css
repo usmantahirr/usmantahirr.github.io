@@ -1,0 +1,189 @@
+@import url(http://fonts.googleapis.com/css?family=Roboto+Slab:400,300,100,700);
+html {
+  box-sizing: border-box;
+}
+
+*, *::after, *::before {
+  box-sizing: inherit;
+}
+
+.hero-unit .hero-content {
+  position: absolute;
+  top: 35%;
+}
+
+.navigation {
+  z-index: 100;
+  padding-top: 4px;
+}
+.navigation .nav-container {
+  width: 80%;
+}
+
+.absolute-nav {
+  position: absolute;
+  width: 100%;
+}
+.absolute-nav::after {
+  clear: both;
+  content: "";
+  display: table;
+}
+
+a {
+  height: 35px;
+  margin-top: 5px;
+}
+
+.dim {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  top: 0;
+  left: 0;
+  background: rgba(34, 36, 38, 0.5);
+}
+
+.hero-unit {
+  background: url("/images/hero-unit.jpg");
+  background-size: cover;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+}
+.hero-unit .hero-content {
+  width: 100%;
+  height: 30%;
+  color: white;
+}
+.hero-unit .title {
+  font-family: "Roboto Slab", serif;
+  font-size: 50px;
+  height: 40px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.hero-unit .search-box .input {
+  width: 40%;
+}
+.hero-unit .action-buttons {
+  margin: 10px;
+}
+
+.home-footer {
+  height: 23%;
+  min-height: 100px;
+  width: 100%;
+  color: white;
+  font-size: 15px;
+  background-color: rgba(35, 35, 35, 0.9);
+  position: absolute;
+  bottom: 0px;
+  text-align: center;
+  padding: 2% 10% 1%;
+}
+.home-footer .social-icons a {
+  color: white;
+}
+.home-footer .social-icons a:visited {
+  color: white;
+}
+.home-footer .social-icons a:hover {
+  color: #3498db;
+}
+
+.customTextArea {
+  width: 120px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+}
+
+.dialogContainer {
+  width: 700px !important;
+}
+
+.ngdialog.dialogwidth640 .ngdialog-content {
+  width: 640px !important;
+}
+
+.customTextAreaFocused {
+  background: gainsboro !important;
+}
+
+.centered {
+  margin: 0 auto !important;
+}
+
+.ngdialog.dialogwidth750 .ngdialog-content {
+  width: 750px !important;
+}
+
+.vis-hidden {
+  visibility: hidden !important;
+}
+
+.dialogContainer {
+  width: 700px !important;
+}
+
+.ngdialog.dialogwidth640 .ngdialog-content {
+  width: 640px !important;
+}
+
+.customHeader {
+  border-bottom: none !important;
+}
+
+.red {
+  color: red !important;
+}
+
+.green {
+  color: greenyellow !important;
+}
+
+.login-container {
+  width: 25%;
+  margin: 7% auto;
+}
+.login-container .content {
+  font-family: "Roboto Slab", serif;
+}
+
+.sign-up-container {
+  width: 60%;
+  margin: 3% auto;
+}
+.sign-up-container .content {
+  font-family: "Roboto Slab", serif;
+}
+.sign-up-container form {
+  padding: 10px;
+}
+.sign-up-container .step-2-row {
+  display: block;
+}
+.sign-up-container .step-2-row::after {
+  clear: both;
+  content: "";
+  display: table;
+}
+.sign-up-container .step-2-row .step-2-links {
+  float: left;
+  display: block;
+  margin-right: 2.35765%;
+  width: 31.76157%;
+}
+.sign-up-container .step-2-row .step-2-links:last-child {
+  margin-right: 0;
+}
+.sign-up-container .step-2-row .step-2-content {
+  float: left;
+  display: block;
+  margin-right: 2.35765%;
+  width: 65.88078%;
+}
+.sign-up-container .step-2-row .step-2-content:last-child {
+  margin-right: 0;
+}

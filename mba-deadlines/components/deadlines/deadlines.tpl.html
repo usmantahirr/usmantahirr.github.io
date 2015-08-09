@@ -1,0 +1,6 @@
+<div class="ui vertical stripe segment" ng-controller=Deadlines><div class="ui middle aligned stackable grid container"><div class=row><h2 class="ui header">Deadlines</h2></div><div class=row><div class="ui fluid left icon input" style=width:100%><input type=text placeholder="Search by University, State & Country"> <i class="square outline icon"></i></div><table class="ui selectable stripped table"><thead><tr><th rowspan=2>School</th><th class="center aligned" colspan=4 style="border-bottom: none;">Deadlines</th><th rowspan=2></th></tr><tr><th>Round 1</th><th>Round 2</th><th>Round 3</th><th>Round 4</th></tr></thead><tbody><tr ng-repeat="deadline in deadlines" ng-mouseenter=hover(deadline) ng-mouseleave=hover(deadline)><td class="left aligned"><span class=bold>{{deadline.school}}</span> <span>{{deadline.address}}</span></td><td class="left aligned">{{deadline.roundOne}}</td><td class="left aligned">{{deadline.roundTwo}}</td><td class="left aligned">{{deadline.roundThree}}</td><td class="left aligned">{{deadline.roundFour}}</td><td class="left aligned"><div ng-class="{'vis-hidden': deadline.showAdd==false}" ng-click=AddSchool() class="ui button" tabindex=0>Add School</div></td></tr></tbody></table></div></div></div><script>
+
+    $('.ui.checkbox')
+            .checkbox()
+    ;
+</script>
