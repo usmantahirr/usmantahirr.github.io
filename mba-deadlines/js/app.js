@@ -936,6 +936,39 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 }());
 
 (function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .filter('schoolSearchFilter', schoolSearchFilter);
+
+    schoolSearchFilter.$inject = ['$filter'];
+
+    function schoolSearchFilter($filter) {
+        return function(input, query) {
+            var universityList = [];
+            for (var i = 0; i < input.length; i++ ) {
+                if ( input[i].school.toLowerCase().indexOf(query.toLowerCase()) !== -1 || input[i].address.toLowerCase().indexOf(query.toLowerCase()) !== -1 ) {
+                    universityList.push(input[i]);
+                }
+            }
+            return universityList;
+        }
+    }
+}());
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('SUEducation', EducationController);
+
+    // EducationController.$inject = [''];
+    function EducationController() {
+    }
+}());
+(function() {
     "use strict";
 
     angular
@@ -968,13 +1001,45 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     signupStepTwoRouter.$inject = ['$stateProvider'];
     function signupStepTwoRouter($stateProvider) {
+        // States for step2
         $stateProvider.state('step2', {
             parent: 'signup',
             url: '/step2',
+            redirectTo: 'su-student-profile',
             views: {
                 'signup-steps': {
                     templateUrl: 'components/signup/signup-steps/step2.tpl.html',
                     controller: 'Signup'
+                }
+            }
+        });
+
+        // States for inner steps in Step2 (User Details)
+        $stateProvider.state('su-student-profile', {
+            parent: 'step2',
+            url: '/student-profile',
+            views: {
+                'signup-inner-steps': {
+                    templateUrl: 'components/signup/signup-steps/student-profile.tpl.html',
+                    controller: 'SUStudentProfile'
+                }
+            }
+        }).state('su-work-experience', {
+            parent: 'step2',
+            url: '/work-experience',
+            views: {
+                'signup-inner-steps': {
+                    templateUrl: 'components/signup/signup-steps/work-experience.tpl.html',
+                    controller: 'SUWorkExperience'
+                }
+            }
+        }).state('su-education', {
+            parent: 'step2',
+            url: '/education',
+            views: {
+                'signup-inner-steps': {
+                    templateUrl: 'components/signup/signup-steps/education.tpl.html',
+                    controller: 'SUEducation'
                 }
             }
         });
@@ -983,6 +1048,33 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 }());
 
 
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .controller('SUStudentProfile',studentProfileController);
+
+    // studentProfileController.$inject = [];
+    function studentProfileController() {
+        console.log('student-profile-controller');
+    }
+
+}());
+
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('SUWorkExperience', WorkExperienceController);
+
+//    WorkExperienceController.$inject = [''];
+    function WorkExperienceController() {
+        console.log('mycontroller');
+    }
+}());
 (function() {
     'use strict';
 
@@ -1085,10 +1177,16 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     DeadlinesController.$inject = ['$scope','ngDialog'];
     function DeadlinesController($scope,ngDialog) {
 
-        $scope.deadlines=[{
+        // Local Variables
+        var vm = this;
+
+        // Exposed Variables
+        vm.searchQuery = '';
+        vm.data = [{
             "id": 1,
-            "school": "Stanford University",
-            "address": "CA 94305, United States",
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
             "roundOne": "26th Jan 15",
             "roundTwo": " 28th Mar 15",
             "roundThree": "26th June 15",
@@ -1096,8 +1194,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             "showAdd":false
         }, {
                 "id": 2,
-                "school": "Insead",
-                "address": "France",
+                "icon": "images/uni-badges/cambridge.png",
+                "school": "Cambridge",
+                "address": "Cambridge, England, United Kingdom",
                 "roundOne": "26th Jan 15",
                 "roundTwo": " 28th Mar 15",
                 "roundThree": "26th June 15",
@@ -1105,8 +1204,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 "showAdd":false
             }, {
                 "id": 3,
+                "icon": "images/uni-badges/stanford.png",
                 "school": "Stanford University",
-                "address": "CA 94305, United States",
+                "address": "450 Serra Mall, Stanford, CA 94305, United States",
                 "roundOne": "26th Jan 15",
                 "roundTwo": " 28th Mar 15",
                 "roundThree": "26th June 15",
@@ -1115,8 +1215,64 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             },
             {
                 "id": 4,
-                "school": "Stanford University",
-                "address": "CA 94305, United States",
+                "icon": "images/uni-badges/mit.png",
+                "school": "MIT",
+                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+                "roundOne": "26th Jan 15",
+                "roundTwo": " 28th Mar 15",
+                "roundThree": "26th June 15",
+                "roundFour":"18th Dec 15",
+                "showAdd":false
+            },
+            {
+                "id": 5,
+                "icon": "images/uni-badges/yale.png",
+                "school": "Yale University",
+                "address": "New Haven, CT 06520, United States",
+                "roundOne": "26th Jan 15",
+                "roundTwo": " 28th Mar 15",
+                "roundThree": "26th June 15",
+                "roundFour":"18th Dec 15",
+                "showAdd":false
+            },
+            {
+                "id": 6,
+                "icon": "images/uni-badges/oxford.png",
+                "school": "University of Oxford",
+                "address": "Oxford, England, United Kingdom",
+                "roundOne": "26th Jan 15",
+                "roundTwo": " 28th Mar 15",
+                "roundThree": "26th June 15",
+                "roundFour":"18th Dec 15",
+                "showAdd":false
+            },
+            {
+                "id": 7,
+                "icon": "images/uni-badges/columbia.png",
+                "school": "Columbia University",
+                "address": "116th St & Broadway, New York, NY 10027, United States",
+                "roundOne": "26th Jan 15",
+                "roundTwo": " 28th Mar 15",
+                "roundThree": "26th June 15",
+                "roundFour":"18th Dec 15",
+                "showAdd":false
+            },
+            {
+                "id": 7,
+                "icon": "images/uni-badges/brown.png",
+                "school": "Brown University",
+                "address": "Providence, RI 02912, United States",
+                "roundOne": "26th Jan 15",
+                "roundTwo": " 28th Mar 15",
+                "roundThree": "26th June 15",
+                "roundFour":"18th Dec 15",
+                "showAdd":false
+            },
+            {
+                "id": 8,
+                "icon": "images/uni-badges/nyu.png",
+                "school": "New York University",
+                "address": "New York, NY, United States",
                 "roundOne": "26th Jan 15",
                 "roundTwo": " 28th Mar 15",
                 "roundThree": "26th June 15",
@@ -1124,12 +1280,42 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 "showAdd":false
             }
         ];
+        vm.selectedSchool = {};
+        vm.selectedRoud = '';
 
-        $scope.hover = function(deadline) {
+        // Exposed Functions
+        vm.addHover = addHover;
+        vm.addSchool = addSchool;
+        vm.selectRound = selectRound;
+        vm.isSelected = isSelected;
+
+        // Function Definitions
+        function addHover ( deadline ) {
             // Shows/hides the add button on hover
             return deadline.showAdd = ! deadline.showAdd;
-        };
-        $scope.AddSchool=function(){
+        }
+
+        function addSchool (school) {
+            vm.selectedSchool = school;
+            $('.uni-details-modal.ui.modal')
+                .modal({
+                    onHide: function () {
+                        vm.selectedRoud = '';
+                    }
+                })
+                .modal('show');
+        }
+
+        function selectRound ( round ) {
+            vm.selectedRoud = round;
+        }
+
+        function isSelected ( round ) {
+            return vm.selectedRoud === round;
+        }
+
+        // Helper Functions
+        $scope.AddSchool = function () {
 
             ngDialog.open({
                 template: 'components/dash/addSchool.tpl.html',
@@ -1157,7 +1343,8 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             views: {
                 'content@': {
                     templateUrl: 'components/deadlines/deadlines.tpl.html',
-                    controller: 'Deadlines'
+                    controller: 'Deadlines',
+                    controllerAs: 'deadlines'
                 }
             }
         });
@@ -1178,7 +1365,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 		vm.launchModal = launchModal;
 
 		function launchModal () {
-			$('.ui.modal').modal('show');
+			$('.how-it-works.ui.modal').modal('show');
 		}
 	}
 }());
@@ -1272,44 +1459,103 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     angular
         .module('mba-deadlines')
         .controller('Rankings', RankingsController);
-    RankingsController.$inject = ['$scope'];
-    function RankingsController($scope) {
+    // RankingsController.$inject = ['$scope'];
+    function RankingsController() {
 
-        $scope.rankings=[{
+        var vm = this;
+
+        vm.searchQuery = '';
+
+        vm.data = [{
             "id": 1,
-            "school": "Stanford University",
-            "address": "CA 94305, United States",
-            "financial": "1",
-            "businessWeek": "2",
-            "economist": "2",
-            "usNews":"2"
+            "icon": "images/uni-badges/cambridge.png",
+            "school": "Cambridge",
+            "address": "Cambridge, England, United Kingdom",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["2", "down"],
+            "usNews": ["2", "down"]
         }, {
             "id": 2,
-            "school": "Insead",
-            "address": "France",
-            "financial": "1",
-            "businessWeek": "2",
-            "economist": "2",
-            "usNews":"-"
+            "icon": "images/uni-badges/stanford.png",
+            "school": "Stanford University",
+            "address": "450 Serra Mall, Stanford, CA 94305, United States",
+            "financial": ["4", "down"],
+            "businessWeek": ["3", "down"],
+            "economist": ["4", "down"],
+            "usNews":["3", "minus"]
         }, {
             "id": 3,
-            "school": "Stanford University",
-            "address": "CA 94305, United States",
-            "financial": "1",
-            "businessWeek": "3",
-            "economist": "1",
-            "usNews":"-"
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "up"],
+            "economist": ["2", "down"],
+            "usNews": ["3", "minus"]
         }, {
-                "id": 4,
-                "school": "Stanford University",
-                "address": "France",
-                "financial": "1",
-                "businessWeek": "2",
-                "economist": "2",
-                "usNews":"2"
+            "id": 4,
+            "icon": "images/uni-badges/mit.png",
+            "school": "MIT",
+            "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["1", "up"],
+            "usNews": ["4", "down"]
+            }, {
+            "id": 5,
+            "icon": "images/uni-badges/yale.png",
+            "school": "Yale University",
+            "address": "New Haven, CT 06520, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "up"],
+            "economist": ["3", "down"],
+            "usNews": ["3", "minus"]
+            }, {
+            "id": 6,
+            "icon": "images/uni-badges/oxford.png",
+            "school": "University of Oxford",
+            "address": "Oxford, England, United Kingdom",
+            "financial": ["3", "minus"],
+            "businessWeek": ["2", "up"],
+            "economist": ["2", "down"],
+            "usNews": ["3", "minus"]
+            }, {
+            "id": 7,
+            "icon": "images/uni-badges/columbia.png",
+            "school": "Columbia University",
+            "address": "116th St & Broadway, New York, NY 10027, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["1", "up"],
+            "usNews": ["1", "up"]
+            }, {
+            "id": 8,
+            "icon": "images/uni-badges/nyu.png",
+            "school": "New York University",
+            "address": "New York, NY, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["2", "down"],
+            "usNews": ["5", "down"]
             }
         ];
 
+        vm.getRankStatus = getRankStatus;
+
+        function getRankStatus (status) {
+            var ret = '';
+            if (status === 'up') {
+                ret = 'up green';
+            } else if (status === 'down') {
+                ret = 'down red';
+            } else {
+                ret = 'minus yellow';
+            }
+
+            console.log('logger: ' + ret);
+            return ret;
+        }
     }
 }());
 
@@ -1328,7 +1574,8 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             views: {
                 'content@': {
                     templateUrl: 'components/rankings/rankings.tpl.html',
-                    controller: 'Rankings'
+                    controller: 'Rankings',
+                    controllerAs: 'rankings'
                 }
             }
         });

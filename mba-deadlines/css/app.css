@@ -131,6 +131,17 @@ a {
   width: 640px !important;
 }
 
+.deadlines-container {
+  width: 70%;
+  margin: 25px auto;
+}
+
+.search-filter {
+  float: right;
+  margin-left: 10px;
+  width: 160px;
+}
+
 .customHeader {
   border-bottom: none !important;
 }
@@ -141,6 +152,11 @@ a {
 
 .green {
   color: greenyellow !important;
+}
+
+.rankings-container {
+  width: 70%;
+  margin: 25px auto;
 }
 
 .login-container {
@@ -161,6 +177,9 @@ a {
 .sign-up-container form {
   padding: 10px;
 }
+.sign-up-container .step {
+  cursor: pointer;
+}
 .sign-up-container .step-2-row {
   display: block;
 }
@@ -173,7 +192,7 @@ a {
   float: left;
   display: block;
   margin-right: 2.35765%;
-  width: 31.76157%;
+  width: 23.23176%;
 }
 .sign-up-container .step-2-row .step-2-links:last-child {
   margin-right: 0;
@@ -182,8 +201,12 @@ a {
   float: left;
   display: block;
   margin-right: 2.35765%;
-  width: 65.88078%;
+  width: 74.41059%;
 }
 .sign-up-container .step-2-row .step-2-content:last-child {
   margin-right: 0;
+}
+.sign-up-container .su-submit {
+  margin-top: 10px;
+  float: right;
 }
