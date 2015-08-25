@@ -93,32 +93,41 @@ a {
   color: #3498db;
 }
 
-.customTextArea {
-  width: 120px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+.dashboard-container {
+  width: 70%;
+  margin: 25px auto;
 }
 
-.dialogContainer {
-  width: 700px !important;
+.dash-add-school {
+  padding: 10px;
 }
 
-.ngdialog.dialogwidth640 .ngdialog-content {
-  width: 640px !important;
+.actions {
+  font-size: 1.5em;
+}
+.actions .action-group {
+  float: right;
+}
+.actions i {
+  padding: 2px;
+  margin-right: 5px;
+  margin-left: 5px;
+  cursor: pointer;
+}
+.actions i:hover {
+  transform: scale(1.2);
+  animation: transformation;
+  animation-duration: 0.3s;
 }
 
-.customTextAreaFocused {
-  background: gainsboro !important;
+@keyframes transformation {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.2);
+  }
 }
-
-.centered {
-  margin: 0 auto !important;
-}
-
-.ngdialog.dialogwidth750 .ngdialog-content {
-  width: 750px !important;
-}
-
 .vis-hidden {
   visibility: hidden !important;
 }
@@ -209,4 +218,73 @@ a {
 .sign-up-container .su-submit {
   margin-top: 10px;
   float: right;
+}
+
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 3px;
+  position: absolute;
+  bottom: 0px;
+  right: 21px;
+  /* Each alert has its own width */
+  float: right;
+  clear: right;
+}
+
+.alert-red {
+  color: white;
+  background-color: #DA4453;
+}
+
+.alert-green {
+  color: white;
+  background-color: #37BC9B;
+}
+
+.alert-blue {
+  color: white;
+  background-color: #4A89DC;
+}
+
+.alert-yellow {
+  color: white;
+  background-color: #F6BB42;
+}
+
+.alert-orange {
+  color: white;
+  font-weight: bold;
+  background-color: #E9573F;
+}
+
+.dashboard-container {
+  width: 70%;
+  margin: 25px auto;
+}
+
+.dash-add-school {
+  padding: 10px;
+}
+
+.country-filter {
+  float: right;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  margin-left: 10px;
+  width: 210px;
+}
+
+.round-filter {
+  float: right;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  margin-left: 10px;
+  width: 197px;
+}
+
+.filterContainer {
+  display: inline-block;
+  margin-bottom: 15px;
+  width: 100%;
 }

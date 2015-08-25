@@ -9,14 +9,22 @@
 		.config(indexConfig);
 
 	// Run Function
-    runBlock.$inject = ['$rootScope', '$state'];
-	function runBlock($rootScope, $state) {
-		$rootScope.$on('$stateChangeStart', function (event, toState, toStateParams) {
+    runBlock.$inject = ['$rootScope', '$state', '$cookies'];
+	function runBlock($rootScope, $state, $cookies) {
+        $rootScope.authorized = false;
+
+        $rootScope.$on('$stateChangeStart', function (event, toState, toStateParams) {
 			if (toState.redirectTo) {
 				event.preventDefault();
 				$state.go(toState.redirectTo);
 			}
-            console.log('state change start');
+
+            if (!$cookies.get('auth')) {
+                $rootScope.authorized = false;
+            } else {
+                $rootScope.authorized = true;
+            }
+            console.log('state change start ' + $cookies.get('auth'));
         });
 
         $rootScope.$on('$stateChangeSuccess', function (event, toState, toStateParams) {
@@ -25,8 +33,8 @@
 	}
 
     // Index State (route)
-	indexConfig.$inject = ['$stateProvider', '$urlRouterProvider',];
-	function indexConfig($stateProvider, $urlRouterProvider) {
+	indexConfig.$inject = ['$stateProvider', '$urlRouterProvider', '$httpProvider'];
+	function indexConfig($stateProvider, $urlRouterProvider, $httpProvider) {
 		$urlRouterProvider.otherwise('/home');
 
 		$stateProvider.state('index', {
@@ -39,6 +47,53 @@
 				}
 			}
 		});
+
+		$httpProvider.defaults.useXDomain = true;
+		delete $httpProvider.defaults.headers.common['X-Requested-With'];
+	}
+}());
+
+(function() {
+	'use strict';
+
+	angular
+		.module('mba-deadlines')
+		.controller('Navigation', NavigationController);
+
+	NavigationController.$inject = ['$state', '$cookies', '$rootScope'];
+	function NavigationController($state, $cookies, $rootScope) {
+
+		// Local Variables
+		var vm = this;
+
+		// Exposed Variables
+		vm.state = $state;
+
+		// Exposed Functions
+		vm.isLandingPage = isLandingPage;
+		vm.isLoginPage = isLoginPage;
+		vm.isSignupPage = isSignupPage;
+		vm.signout = signout;
+
+		// Implementations
+		function isLandingPage() {
+			return vm.state.is('landing-page');
+		}
+
+		function isLoginPage() {
+			return vm.state.is('login');
+		}
+
+		function isSignupPage() {
+			return vm.state.is('signup');
+		}
+
+		function signout() {
+			$cookies.remove('auth');
+			$rootScope.authorized = false;
+			$rootScope.portalUser = {};
+			$state.go('landing-page');
+		}
 	}
 }());
 
@@ -900,42 +955,6 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 })(window, window.angular);
 (function() {
-	'use strict';
-
-	angular
-		.module('mba-deadlines')
-		.controller('Navigation', NavigationController);
-
-	NavigationController.$inject = ['$state'];
-	function NavigationController($state) {
-
-		// Local Variables
-		var vm = this;
-
-		// Exposed Variables
-		vm.state = $state;
-
-		// Exposed Functions
-		vm.isLandingPage = isLandingPage;
-		vm.isLoginPage = isLoginPage;
-		vm.isSignupPage = isSignupPage;
-
-		// Implementations
-		function isLandingPage() {
-			return vm.state.is('landing-page');
-		}
-
-		function isLoginPage() {
-			return vm.state.is('login');
-		}
-
-		function isSignupPage() {
-			return vm.state.is('signup');
-		}
-	}
-}());
-
-(function() {
     'use strict';
 
     angular
@@ -955,6 +974,76 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             return universityList;
         }
     }
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminService', adminService);
+
+    function adminService () {
+
+    }
+
+}());
+(function () {
+    angular
+        .module('mba-deadlines')
+        .value('BASE_URL', 'http://mba-deadlines.evennode.com');
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('schoolsService', schoolsService);
+
+    schoolsService.$inject = ['BASE_URL', '$resource'];
+    function schoolsService (BASE_URL, $resource) {
+
+        var schoolResource = $resource(BASE_URL + '/schools', {});
+        var bookmarkedResource = $resource(BASE_URL + '/bookmarks/:user_id',{}, {
+            get: {
+                method: 'GET',
+                isArray: true
+            }
+        });
+        var classProfileResource = $resource(BASE_URL + '/class-profile/:id', {});
+
+        return {
+            rest: schoolResource,
+            bookmarks: bookmarkedResource,
+            classProfile: classProfileResource
+        };
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('userService', userService);
+
+    userService.$inject = ['BASE_URL', '$resource'];
+    function userService (BASE_URL, $resource) {
+        var userResource = $resource(BASE_URL + '/auth', {}, {
+            post: {
+                'method': 'POST'
+            }
+        });
+        var userData = $resource(BASE_URL + '/users/:id');
+
+        return {
+            rest: userResource,
+            data: userData
+        }
+    }
+
 }());
 
 (function () {
@@ -1080,87 +1169,218 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     angular
         .module('mba-deadlines')
-        .controller('Dash', Dashboard);
-    Dashboard.$inject = ['$scope','ngDialog','$location'];
+        .controller('Dashboard', DashboardController);
+    DashboardController.$inject = ['$scope', 'schoolsService', 'userService', '$cookies'];
+    function DashboardController($scope, schoolsService, userService, $cookies) {
 
-    function Dashboard($scope,ngDialog,$location) {
+        // Local Variables
+        var vm = this;
+        var addDropDown = '';
 
-        $scope.textAreaFocused=false;
-        $scope.writeEssay=false;
-        $scope.roundSelected=function(id){
+        // Exposed Variables
+        /**
+         * Array which stores only bookmarked school objects
+         * @type {Array}
+         */
+        vm.bookmarkedSchools = [];
+        /**
+         * Array which holds all School Objects
+         * @type {Array}
+         */
+        vm.allSchools = [];
+        /**
+         * Object which holds class profile for specific school. Its updated every time you ask for class profile
+         * as it only stores content of single object
+         * @type {Object}
+         */
+        vm.classProfile = {};
+        /**
+         * Object which holds only selected school content during bookmark process.
+         * This object is reset to empty when modal is closed.
+         * @type {Object}
+         */
+        vm.selectedSchool = {};
+        /**
+         * Stores selected round number during bookmark process
+         * @type {string}
+         */
+        vm.selectedRound = '';
 
-            $("textarea").removeClass("customTextAreaFocused");
-            $('#'+id).addClass('customTextAreaFocused');
-            return $scope.textAreaFocused=true;
+        // Exposed Functions
+        vm.isSchoolListEmpty = isSchoolListEmpty;
+        vm.addSchool = addSchool;
+        vm.selectRound = selectRound;
+        vm.isSelected = isSelected;
+        vm.bookMarkRound = bookMarkRound;
+        vm.isDropdownSelected = isDropdownSelected;
+        vm.bookmarked = isBookmarked;
+        vm.getClassProfile = getClassProfile;
 
-        };
-        $scope.addSchool=function(){
+        initController();
+        // Function Definitions
+        // Helper Functions
 
-            ngDialog.open({
-                template: 'components/dash/addSchool.tpl.html',
-                className: 'ngdialog-theme-default dialogwidth640',
-                controller:'Dash'
+        /**
+         * When used click on add, it adds bookmark to bookmark list
+         */
+        function bookMarkRound () {
+            var temp = vm.selectedSchool;
 
+            if ( vm.selectedRound === 1 ) {
+                temp.selectedRound = temp.roundOne;
+            } else if ( vm.selectedRound === 2 ) {
+                temp.selectedRound = temp.roundTwo;
+            } else if ( vm.selectedRound === 3 ) {
+                temp.selectedRound = temp.roundThree;
+            } else if ( vm.selectedRound === 4 ) {
+                temp.selectedRound = temp.roundFour;
+            } else {
+                ohSnap('No Match Found', 'warning');
+                console.log('No Match Found');
+            }
+
+            if (temp) {
+                temp.user_id = $cookies.get('auth');
+            }
+
+            schoolsService.bookmarks.save(temp, function (obj) {
+                vm.bookmarkedSchools.push(obj);
+                ohSnap(temp.school + ' bookmarked', 'green');
+            }, function (error) {
+                ohSnap('Fail: ' + error.toString(), 'red');
             });
-        };
-        $scope.SaveSchool=function()
-        {
-            ngDialog.closeAll();
-            $location.path("/dash");
 
-        };
-        $scope.showProfile=function()
-        {
-            ngDialog.open({
-                template: 'components/dash/classProfile.tpl.html',
-                className: 'ngdialog-theme-default dialogwidth750',
-                controller:'Dash'
+        }
 
+        /**
+         * Check to tell is school list empty
+         * @returns {boolean}
+         */
+        function isSchoolListEmpty () {
+            return !vm.bookmarkedSchools.length > 0;
+        }
+
+        /**
+         * Add school to bookmarks, it initiates @bookmarkSchool function when finish preprocessing.
+         */
+        function addSchool() {
+
+            $('.dash-add-school.coupled.modal').modal({
+                allowMultiple: false
             });
-        };
-        $scope.showEditor = function()
-        {
-            console.log('showing editor...');
-            return  $scope.writeEssay=true;
-        };
 
-        $scope.options = {
-            placeholder : ''
-        };
-        $scope.myHtml = "";
+            // First Modal
+            $('.dash-search-school.first.modal').modal({
+                onShow: function () {
+                    addDropDown = $('.school-list.dropdown').dropdown({
+                        onChange: function (school) {
+                            vm.selectedSchool = school;
+                        }
+                    });
+                }
+            }).modal('show');
 
-        $scope.froalaAction = function(action){
-            $scope.options.froala(action);
-        };
+            // Second Modal
+            $('.dash-select-session.second.modal').modal({
+                onShow: function () {
+                    $scope.$apply();
+                },
+                onHide: function () {
+                    vm.selectedRound = '';
+                    vm.selectedSchool = {};
+                    addDropDown.dropdown('clear');
+                },
+                onApprove: function() {
+                    vm.bookMarkRound();
+                }
+            }).modal('attach events', '.dash-search-school.first.modal .proceed');
+        }
 
-        $scope.onPaste = function(e, editor, html){
-            //return 'Hijacked ' + html;
-        };
+        /**
+         * Select round from modal. It Assigns the object corresponding to round number passed
+         * @param round
+         */
+        function selectRound ( round ) {
+            vm.selectedRound = round;
+        }
 
-        $scope.onEvent = function(e, editor, a, b){
-            console.log('onEvent', e.namespace, a, b);
-        };
+        /**
+         * check if round your are passing down is selected or not
+         * @param round
+         * @returns {boolean}
+         */
+        function isSelected ( round ) {
+            return vm.selectedRound === round;
+        }
 
+        /**
+         * check if item in bookmark modal dropdown is selected or not.
+         * @returns {{}|*}
+         */
+        function isDropdownSelected () {
+            return vm.selectedSchool;
+        }
 
+        /**
+         * Show class profile on a new Modal
+         * @param profile
+         */
+        function getClassProfile (profile) {
+            vm.classProfile = profile;
+            $('.class-profile.modal').modal('show');
+        }
 
+        /**
+         * Check if the school object you are passing is already bookmarked or not
+         * @param school
+         * @returns {boolean}
+         */
+        function isBookmarked(school) {
+            if (vm.bookmarkedSchools.length > 0) {
+                for ( var i = 0; i < vm.bookmarkedSchools.length; i++ ) {
+                    debugger;
+                    if (vm.bookmarkedSchools[i]._id === school._id) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * Controller Initializer
+         */
+        function initController () {
+
+            // Variable Initializations
+            schoolsService.rest.query(function (schools) {
+                vm.allSchools = schools;
+            });
+            schoolsService.bookmarks.get({user_id: $cookies.get('auth')}, function (object) {
+                vm.bookmarkedSchools = object;
+            });
+        }
     }
 }());
+
 (function() {
     "use strict";
 
     angular
         .module('mba-deadlines')
-        .config(dashRouter);
+        .config(dashboardRouter);
 
-    dashRouter.$inject = ['$stateProvider'];
-    function dashRouter($stateProvider) {
-        $stateProvider.state('dash', {
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('dashboard', {
             parent: 'index',
-            url: '/dash',
+            url: '/dashboard',
             views: {
                 'content@': {
-                    templateUrl: 'components/dash/dash.tpl.html',
-                    controller: 'Dash'
+                    templateUrl: 'components/dashboard/dashboard.tpl.html',
+                    controller: 'Dashboard',
+                    controllerAs: 'dashboard'
                 }
             }
         });
@@ -1173,113 +1393,24 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     angular
         .module('mba-deadlines')
+        .factory('');
+
+}());
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
         .controller('Deadlines', DeadlinesController);
-    DeadlinesController.$inject = ['$scope','ngDialog'];
-    function DeadlinesController($scope,ngDialog) {
+    DeadlinesController.$inject = ['schoolsService'];
+    function DeadlinesController (schoolsService) {
 
         // Local Variables
         var vm = this;
 
         // Exposed Variables
         vm.searchQuery = '';
-        vm.data = [{
-            "id": 1,
-            "icon": "images/uni-badges/harvard.png",
-            "school": "Harvard University",
-            "address": "Cambridge, MA 02138, United States",
-            "roundOne": "26th Jan 15",
-            "roundTwo": " 28th Mar 15",
-            "roundThree": "26th June 15",
-            "roundFour":"18th Dec 15",
-            "showAdd":false
-        }, {
-                "id": 2,
-                "icon": "images/uni-badges/cambridge.png",
-                "school": "Cambridge",
-                "address": "Cambridge, England, United Kingdom",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            }, {
-                "id": 3,
-                "icon": "images/uni-badges/stanford.png",
-                "school": "Stanford University",
-                "address": "450 Serra Mall, Stanford, CA 94305, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 4,
-                "icon": "images/uni-badges/mit.png",
-                "school": "MIT",
-                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 5,
-                "icon": "images/uni-badges/yale.png",
-                "school": "Yale University",
-                "address": "New Haven, CT 06520, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 6,
-                "icon": "images/uni-badges/oxford.png",
-                "school": "University of Oxford",
-                "address": "Oxford, England, United Kingdom",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 7,
-                "icon": "images/uni-badges/columbia.png",
-                "school": "Columbia University",
-                "address": "116th St & Broadway, New York, NY 10027, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 7,
-                "icon": "images/uni-badges/brown.png",
-                "school": "Brown University",
-                "address": "Providence, RI 02912, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            },
-            {
-                "id": 8,
-                "icon": "images/uni-badges/nyu.png",
-                "school": "New York University",
-                "address": "New York, NY, United States",
-                "roundOne": "26th Jan 15",
-                "roundTwo": " 28th Mar 15",
-                "roundThree": "26th June 15",
-                "roundFour":"18th Dec 15",
-                "showAdd":false
-            }
-        ];
+        vm.data = [];
         vm.selectedSchool = {};
         vm.selectedRoud = '';
 
@@ -1288,6 +1419,8 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         vm.addSchool = addSchool;
         vm.selectRound = selectRound;
         vm.isSelected = isSelected;
+
+        init();
 
         // Function Definitions
         function addHover ( deadline ) {
@@ -1314,16 +1447,11 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             return vm.selectedRoud === round;
         }
 
-        // Helper Functions
-        $scope.AddSchool = function () {
-
-            ngDialog.open({
-                template: 'components/dash/addSchool.tpl.html',
-                className: 'ngdialog-theme-default dialogwidth640',
-                controller:'Dash'
-
+        function init() {
+            schoolsService.rest.query(function(schools) {
+                vm.data = schools;
             });
-        };
+        }
 
     }
 }());
@@ -1352,6 +1480,90 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 }());
 
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminDashboard', AdminDashboardController);
+    //AdminDashboardController.$inject = ['$scope'];
+    function AdminDashboardController() {
+
+        // Local Variables
+        var vm = this;
+
+        vm.searchQuery = '';
+        vm.topSchools = [{
+            "id": 1,
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
+            "applications":2390
+        }, {
+                "id": 2,
+                "icon": "images/uni-badges/cambridge.png",
+                "school": "Cambridge",
+                "address": "Cambridge, England, United Kingdom",
+                "applications":1130
+            }, {
+                "id": 3,
+                "icon": "images/uni-badges/stanford.png",
+                "school": "Stanford University",
+                "address": "450 Serra Mall, Stanford, CA 94305, United States",
+                "applications":890
+            },
+            {
+                "id": 4,
+                "icon": "images/uni-badges/mit.png",
+                "school": "MIT",
+                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+                "applications":560
+            },
+            {
+                "id": 5,
+                "icon": "images/uni-badges/yale.png",
+                "school": "Yale University",
+                "address": "New Haven, CT 06520, Andorra",
+                "applications":400
+            }
+        ];
+
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminDashboardRouter);
+
+    AdminDashboardRouter.$inject = ['$stateProvider'];
+    function AdminDashboardRouter($stateProvider) {
+        $stateProvider.state('admindashboard', {
+            parent: 'index',
+            url: '/admin',
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-dashboard.tpl.html',
+                    controller: 'AdminDashboard',
+                    controllerAs: 'admindashboard'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('');
+
+}());
 (function() {
 	'use strict';
 
@@ -1404,9 +1616,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     angular
         .module('mba-deadlines')
         .controller('Login', LoginController);
-    LoginController.$inject = ['$state', '$cookies'];
+    LoginController.$inject = ['$state', '$cookies', 'userService', '$rootScope'];
 
-    function LoginController($state, $cookies) {
+    function LoginController($state, $cookies, userService, $rootScope) {
         var vm = this;
 
         // Exposed Variables
@@ -1418,8 +1630,18 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         vm.auth = login;
 
         function login() {
-            $cookies.put('auth', 'true');
-            $state.go('dash');
+
+            userService.rest.post({email: vm.email, password: vm.password}, function (obj) {
+                if (obj._id) {
+                    $cookies.put('auth', obj._id);
+                    $rootScope.portalUser = obj;
+                    $state.go('dashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+            //$cookies.put('auth', 'true');
+            // $state.go('dashboard');
         }
 
     }
@@ -1552,8 +1774,6 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
             } else {
                 ret = 'minus yellow';
             }
-
-            console.log('logger: ' + ret);
             return ret;
         }
     }
