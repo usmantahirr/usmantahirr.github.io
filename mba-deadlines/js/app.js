@@ -1,39 +1,58 @@
-(function () {
+(function() {
 	'use strict';
 
 	angular
-		.module('mba-deadlines', ['ngResource', 'ui.router','ngDialog','ngSanitize','froala', 'ngCookies'])
+		.module('mba-deadlines', ['ngResource', 'ui.router', 'ngDialog', 'ngSanitize', 'froala', 'ngCookies'])
 		.value('froalaConfig', {
 			inlineMode: false
 		}).run(runBlock)
 		.config(indexConfig);
 
 	// Run Function
-    runBlock.$inject = ['$rootScope', '$state', '$cookies'];
-	function runBlock($rootScope, $state, $cookies) {
-        $rootScope.authorized = false;
+	runBlock.$inject = ['$rootScope', '$state', '$cookies'];
 
-        $rootScope.$on('$stateChangeStart', function (event, toState, toStateParams) {
+	function runBlock($rootScope, $state, $cookies) {
+		$rootScope.authorized = false;
+		$rootScope.admin = false;
+
+		$rootScope.$on('$stateChangeStart', function(event, toState, toStateParams) {
 			if (toState.redirectTo) {
 				event.preventDefault();
 				$state.go(toState.redirectTo);
 			}
 
-            if (!$cookies.get('auth')) {
-                $rootScope.authorized = false;
-            } else {
-                $rootScope.authorized = true;
-            }
-            console.log('state change start ' + $cookies.get('auth'));
-        });
+			if (!$cookies.get('auth')) {
+				$rootScope.authorized = false;
+			} else {
+				$rootScope.authorized = true;
+			}
 
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toStateParams) {
-            console.log('state change Success');
-        });
+			if (!$cookies.get('admin')) {
+				$rootScope.admin = false;
+			} else {
+				$rootScope.admin = true;
+			}
+		});
+
+		$rootScope.$on('$stateChangeSuccess', function(event, toState, toStateParams) {
+			if (toState.data) {
+				if (toState.data.requireAuth) {
+					if (!$rootScope.authorized) {
+						console.log('not auth');
+						$state.go('login');
+					}
+				} else if (toState.data.admin) {
+					if (!$rootScope.admin) {
+						$state.go('admin-login');
+					}
+				}
+			}
+		});
 	}
 
-    // Index State (route)
+	// Index State (route)
 	indexConfig.$inject = ['$stateProvider', '$urlRouterProvider', '$httpProvider'];
+
 	function indexConfig($stateProvider, $urlRouterProvider, $httpProvider) {
 		$urlRouterProvider.otherwise('/home');
 
@@ -43,7 +62,7 @@
 				'navigation': {
 					templateUrl: 'shared/navigation/navigation.tpl.html',
 					controller: 'Navigation',
-                    controllerAs: 'nav'
+					controllerAs: 'nav'
 				}
 			}
 		});
@@ -52,51 +71,6 @@
 		delete $httpProvider.defaults.headers.common['X-Requested-With'];
 	}
 }());
-
-(function() {
-	'use strict';
-
-	angular
-		.module('mba-deadlines')
-		.controller('Navigation', NavigationController);
-
-	NavigationController.$inject = ['$state', '$cookies', '$rootScope'];
-	function NavigationController($state, $cookies, $rootScope) {
-
-		// Local Variables
-		var vm = this;
-
-		// Exposed Variables
-		vm.state = $state;
-
-		// Exposed Functions
-		vm.isLandingPage = isLandingPage;
-		vm.isLoginPage = isLoginPage;
-		vm.isSignupPage = isSignupPage;
-		vm.signout = signout;
-
-		// Implementations
-		function isLandingPage() {
-			return vm.state.is('landing-page');
-		}
-
-		function isLoginPage() {
-			return vm.state.is('login');
-		}
-
-		function isSignupPage() {
-			return vm.state.is('signup');
-		}
-
-		function signout() {
-			$cookies.remove('auth');
-			$rootScope.authorized = false;
-			$rootScope.portalUser = {};
-			$state.go('landing-page');
-		}
-	}
-}());
-
 angular.module('froala', []).
 	value('froalaConfig', {}).
 	directive('froala', ['froalaConfig', '$timeout', function(froalaConfig, $timeout) {
@@ -955,6 +929,50 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 })(window, window.angular);
 (function() {
+	'use strict';
+
+	angular
+		.module('mba-deadlines')
+		.controller('Navigation', NavigationController);
+
+	NavigationController.$inject = ['$state', '$cookies', '$rootScope'];
+	function NavigationController($state, $cookies, $rootScope) {
+
+		// Local Variables
+		var vm = this;
+
+		// Exposed Variables
+		vm.state = $state;
+
+		// Exposed Functions
+		vm.isLandingPage = isLandingPage;
+		vm.isLoginPage = isLoginPage;
+		vm.isSignupPage = isSignupPage;
+		vm.signout = signout;
+
+		// Implementations
+		function isLandingPage() {
+			return vm.state.is('landing-page');
+		}
+
+		function isLoginPage() {
+			return vm.state.is('login');
+		}
+
+		function isSignupPage() {
+			return vm.state.is('signup');
+		}
+
+		function signout() {
+			$cookies.remove('auth');
+			$rootScope.authorized = false;
+			$rootScope.portalUser = {};
+			$state.go('landing-page');
+		}
+	}
+}());
+
+(function() {
     'use strict';
 
     angular
@@ -992,6 +1010,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     angular
         .module('mba-deadlines')
         .value('BASE_URL', 'http://mba-deadlines.evennode.com');
+        // .value('BASE_URL', 'http://localhost:3000');
 }());
 
 (function() {
@@ -1005,12 +1024,16 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     function schoolsService (BASE_URL, $resource) {
 
         var schoolResource = $resource(BASE_URL + '/schools', {});
-        var bookmarkedResource = $resource(BASE_URL + '/bookmarks/:user_id',{}, {
+        var bookmarkedResource = $resource(BASE_URL + '/bookmarks/:user_id', {}, {
             get: {
                 method: 'GET',
                 isArray: true
+            },
+            delete: {
+                method: 'POST'
             }
         });
+
         var classProfileResource = $resource(BASE_URL + '/class-profile/:id', {});
 
         return {
@@ -1046,6 +1069,473 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 }());
 
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminDeadlines', AdminDeadlines);
+    AdminDeadlines.$inject = ['schoolsService'];
+    function AdminDeadlines (schoolsService) {
+
+        // Local Variables
+        var vm = this;
+
+        // Exposed Variables
+        vm.searchQuery = '';
+        vm.data = [];
+        vm.selectedSchool = {};
+        vm.selectedRoud = '';
+
+        // Exposed Functions
+        vm.addHover = addHover;
+        vm.addSchool = addSchool;
+        vm.selectRound = selectRound;
+        vm.isSelected = isSelected;
+
+        init();
+
+        // Function Definitions
+        function addHover ( deadline ) {
+            // Shows/hides the add button on hover
+            return deadline.showAdd = ! deadline.showAdd;
+        }
+
+        function addSchool (school) {
+            vm.selectedSchool = school;
+            $('.uni-details-modal.ui.modal')
+                .modal({
+                    onHide: function () {
+                        vm.selectedRoud = '';
+                    }
+                })
+                .modal('show');
+        }
+
+        function selectRound ( round ) {
+            vm.selectedRoud = round;
+        }
+
+        function isSelected ( round ) {
+            return vm.selectedRoud === round;
+        }
+
+        function init() {
+            schoolsService.rest.query(function(schools) {
+                vm.data = schools;
+            });
+        }
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminDeadlinesRouter);
+
+    AdminDeadlinesRouter.$inject = ['$stateProvider'];
+    function AdminDeadlinesRouter($stateProvider) {
+        $stateProvider.state('adminDeadlines', {
+            parent: 'admindashboard',
+            url: '/deadlines',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-deadlines/admin-deadlines.tpl.html',
+                    controller: 'AdminDeadlines',
+                    controllerAs: 'aDeadlines'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminDeadlinesSvc', adminDeadlinesService);
+
+    adminDeadlinesService.$inject = ['BASE_URL', '$resource'];
+
+    function adminDeadlinesService (BASE_URL, $resource) {
+    	var deadlinesResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: deadlinesResource
+    	}
+    }
+
+}());
+(function () {
+	"use strict";
+
+	angular
+		.module('mba-deadlines')
+		.controller('AdminLogin', AdminLogin);
+
+	function AdminLogin() {
+		console.log('admin-login');
+	}
+}());
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(dashboardRouter);
+
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('admin-login', {
+            parent: 'index',
+            url: '/admin-login',
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
+                    controller: 'AdminLogin',
+                    controllerAs: 'admin-login'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminRankings', AdminRankings);
+    // AdminRankings.$inject = ['$scope'];
+    function AdminRankings() {
+
+        var vm = this;
+
+        vm.searchQuery = '';
+
+        vm.data = [{
+            "id": 1,
+            "icon": "images/uni-badges/cambridge.png",
+            "school": "Cambridge",
+            "address": "Cambridge, England, United Kingdom",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["2", "down"],
+            "usNews": ["2", "down"]
+        }, {
+            "id": 2,
+            "icon": "images/uni-badges/stanford.png",
+            "school": "Stanford University",
+            "address": "450 Serra Mall, Stanford, CA 94305, United States",
+            "financial": ["4", "down"],
+            "businessWeek": ["3", "down"],
+            "economist": ["4", "down"],
+            "usNews":["3", "minus"]
+        }, {
+            "id": 3,
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "up"],
+            "economist": ["2", "down"],
+            "usNews": ["3", "minus"]
+        }, {
+            "id": 4,
+            "icon": "images/uni-badges/mit.png",
+            "school": "MIT",
+            "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["1", "up"],
+            "usNews": ["4", "down"]
+            }, {
+            "id": 5,
+            "icon": "images/uni-badges/yale.png",
+            "school": "Yale University",
+            "address": "New Haven, CT 06520, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "up"],
+            "economist": ["3", "down"],
+            "usNews": ["3", "minus"]
+            }, {
+            "id": 6,
+            "icon": "images/uni-badges/oxford.png",
+            "school": "University of Oxford",
+            "address": "Oxford, England, United Kingdom",
+            "financial": ["3", "minus"],
+            "businessWeek": ["2", "up"],
+            "economist": ["2", "down"],
+            "usNews": ["3", "minus"]
+            }, {
+            "id": 7,
+            "icon": "images/uni-badges/columbia.png",
+            "school": "Columbia University",
+            "address": "116th St & Broadway, New York, NY 10027, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["1", "up"],
+            "usNews": ["1", "up"]
+            }, {
+            "id": 8,
+            "icon": "images/uni-badges/nyu.png",
+            "school": "New York University",
+            "address": "New York, NY, United States",
+            "financial": ["1", "up"],
+            "businessWeek": ["2", "down"],
+            "economist": ["2", "down"],
+            "usNews": ["5", "down"]
+            }
+        ];
+
+        vm.getRankStatus = getRankStatus;
+
+        function getRankStatus (status) {
+            var ret = '';
+            if (status === 'up') {
+                ret = 'up green';
+            } else if (status === 'down') {
+                ret = 'down red';
+            } else {
+                ret = 'minus yellow';
+            }
+            return ret;
+        }
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminRankingsRouter);
+
+    AdminRankingsRouter.$inject = ['$stateProvider'];
+    function AdminRankingsRouter($stateProvider) {
+        $stateProvider.state('adminRankings', {
+            parent: 'admindashboard',
+            url: '/rankings',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
+                    controller: 'AdminRankings',
+                    controllerAs: 'adminRankings'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminRankingsSvc', adminRankingsSvc);
+
+    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminRankingsSvc (BASE_URL, $resource) {
+    	var rankingsResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: rankingsResource
+    	}
+    }
+
+}());
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminSchools', AdminSchoolsController);
+    AdminSchoolsController.$inject = ['schoolsService', '$http', 'BASE_URL'];
+    function AdminSchoolsController(schoolsService, $http, BASE_URL) {
+
+        // Local Variables
+        var vm = this;
+
+        vm.searchQuery = '';
+        vm.allSchools = [];
+        vm.delete = deleteSchool;
+
+        function initController () {            
+            schoolsService.rest.query(function (schools) {
+                vm.allSchools = schools;
+            })
+        }
+
+        /**
+         * Function called when ever any bookmark deleted
+         * @param  {int} bokmark_id
+         */
+        function deleteSchool(id) {
+            $('.delete-modal.modal').modal({
+                onApprove: function() {
+                    $http.delete(BASE_URL + '/schools/' + id, {}).success(function(data, status) {
+                        // vm.bookmarkedSchools = vm.bookmarkedSchools.filter(function(el) {
+                        //     return el._id !== id
+                        // })
+                        ohSnap('Record Removed', 'green')
+                        console.log(data, status);
+                    }).error(function(error, status) {
+                        ohSnap('Error Code: ' + status, 'red');
+                    });
+                }
+            }).modal('show');
+        }
+
+        initController();
+
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminSchoolsRouter);
+
+    AdminSchoolsRouter.$inject = ['$stateProvider'];
+    function AdminSchoolsRouter($stateProvider) {
+        $stateProvider.state('adminSchools', {
+            parent: 'admindashboard',
+            url: '/schools',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-schools/admin-schools.tpl.html',
+                    controller: 'AdminSchools',
+                    controllerAs: 'adminSchools'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminSchoolsSvc', adminSchoolsSvc);
+
+    adminSchoolsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminSchoolsSvc (BASE_URL, $resource) {
+    	var rankingsResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: rankingsResource
+    	}
+    }
+
+}());
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminStats', AdminStatsController);
+    //AdminStatsController.$inject = ['$scope'];
+    function AdminStatsController() {
+
+        // Local Variables
+        var vm = this;
+
+        vm.searchQuery = '';
+        vm.topSchools = [{
+            "id": 1,
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
+            "applications":2390
+        }, {
+                "id": 2,
+                "icon": "images/uni-badges/cambridge.png",
+                "school": "Cambridge",
+                "address": "Cambridge, England, United Kingdom",
+                "applications":1130
+            }, {
+                "id": 3,
+                "icon": "images/uni-badges/stanford.png",
+                "school": "Stanford University",
+                "address": "450 Serra Mall, Stanford, CA 94305, United States",
+                "applications":890
+            },
+            {
+                "id": 4,
+                "icon": "images/uni-badges/mit.png",
+                "school": "MIT",
+                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+                "applications":560
+            },
+            {
+                "id": 5,
+                "icon": "images/uni-badges/yale.png",
+                "school": "Yale University",
+                "address": "New Haven, CT 06520, Andorra",
+                "applications":400
+            }
+        ];
+
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(adminStatsRouter);
+
+    adminStatsRouter.$inject = ['$stateProvider'];
+    function adminStatsRouter($stateProvider) {
+        $stateProvider.state('adminStats', {
+            parent: 'admindashboard',
+            url: '/stats',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-stats/admin-stats.tpl.html',
+                    controller: 'AdminStats',
+                    controllerAs: 'adminStats'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminStatsSvc', adminStatsSvc);
+
+    adminStatsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminStatsSvc (BASE_URL, $resource) {
+    	var rankingsResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: rankingsResource
+    	}
+    }
+
+}());
 (function () {
     'use strict';
 
@@ -1169,9 +1659,108 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
     angular
         .module('mba-deadlines')
+        .controller('AdminDashboard', AdminDashboardController);
+    //AdminDashboardController.$inject = ['$scope'];
+    function AdminDashboardController() {
+
+        // Local Variables
+        var vm = this;
+
+        vm.searchQuery = '';
+        vm.topSchools = [{
+            "id": 1,
+            "icon": "images/uni-badges/harvard.png",
+            "school": "Harvard University",
+            "address": "Cambridge, MA 02138, United States",
+            "applications":2390
+        }, {
+                "id": 2,
+                "icon": "images/uni-badges/cambridge.png",
+                "school": "Cambridge",
+                "address": "Cambridge, England, United Kingdom",
+                "applications":1130
+            }, {
+                "id": 3,
+                "icon": "images/uni-badges/stanford.png",
+                "school": "Stanford University",
+                "address": "450 Serra Mall, Stanford, CA 94305, United States",
+                "applications":890
+            },
+            {
+                "id": 4,
+                "icon": "images/uni-badges/mit.png",
+                "school": "MIT",
+                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
+                "applications":560
+            },
+            {
+                "id": 5,
+                "icon": "images/uni-badges/yale.png",
+                "school": "Yale University",
+                "address": "New Haven, CT 06520, Andorra",
+                "applications":400
+            }
+        ];
+
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminDashboardRouter);
+
+    AdminDashboardRouter.$inject = ['$stateProvider'];
+    function AdminDashboardRouter($stateProvider) {
+        $stateProvider.state('admindashboard', {
+            parent: 'index',
+            url: '/admin',
+            redirectTo: 'adminStats',
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-dashboard.tpl.html',
+                    controller: 'AdminDashboard',
+                    controllerAs: 'admindashboard'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminServices', adminServices);
+
+    adminServices.$inject = ['BASE_URL','$resource', '$http'];
+
+    function adminServices (BASE_URL, $resource, $http) {
+
+    	var schoolResource = $resource(BASE_URL + '/schools', {});
+    	var httpSVC = $http(BASE_URL + '/schools/:id', {});
+
+    	return {
+    		rest: schoolResource,
+    		http: httpSVC
+    	}
+    }
+
+}());
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
         .controller('Dashboard', DashboardController);
-    DashboardController.$inject = ['$scope', 'schoolsService', 'userService', '$cookies'];
-    function DashboardController($scope, schoolsService, userService, $cookies) {
+    DashboardController.$inject = ['$scope', 'schoolsService', 'userService', '$cookies', '$http', 'BASE_URL'];
+
+    function DashboardController($scope, schoolsService, userService, $cookies, $http, BASE_URL) {
 
         // Local Variables
         var vm = this;
@@ -1215,6 +1804,8 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         vm.isDropdownSelected = isDropdownSelected;
         vm.bookmarked = isBookmarked;
         vm.getClassProfile = getClassProfile;
+        vm.deleteBookmark = removeBookmark;
+        vm.edit = editHandler;
 
         initController();
         // Function Definitions
@@ -1223,16 +1814,16 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         /**
          * When used click on add, it adds bookmark to bookmark list
          */
-        function bookMarkRound () {
+        function bookMarkRound() {
             var temp = vm.selectedSchool;
 
-            if ( vm.selectedRound === 1 ) {
+            if (vm.selectedRound === 1) {
                 temp.selectedRound = temp.roundOne;
-            } else if ( vm.selectedRound === 2 ) {
+            } else if (vm.selectedRound === 2) {
                 temp.selectedRound = temp.roundTwo;
-            } else if ( vm.selectedRound === 3 ) {
+            } else if (vm.selectedRound === 3) {
                 temp.selectedRound = temp.roundThree;
-            } else if ( vm.selectedRound === 4 ) {
+            } else if (vm.selectedRound === 4) {
                 temp.selectedRound = temp.roundFour;
             } else {
                 ohSnap('No Match Found', 'warning');
@@ -1243,20 +1834,80 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
                 temp.user_id = $cookies.get('auth');
             }
 
-            schoolsService.bookmarks.save(temp, function (obj) {
+            schoolsService.bookmarks.save(temp, function(obj) {
                 vm.bookmarkedSchools.push(obj);
                 ohSnap(temp.school + ' bookmarked', 'green');
-            }, function (error) {
+            }, function(error) {
                 ohSnap('Fail: ' + error.toString(), 'red');
             });
 
         }
 
         /**
+         * Function called when ever any bookmark deleted
+         * @param  {int} bokmark_id
+         */
+        function removeBookmark(id) {
+            var user = $cookies.get('auth');
+            $('.delete-modal.modal').modal({
+                onApprove: function() {
+                    $http.delete(BASE_URL + '/bookmarks/' + id, {
+                        params: {
+                            user_id: user
+                        }
+                    }).success(function(data, status) {
+                        vm.bookmarkedSchools = vm.bookmarkedSchools.filter(function(el) {
+                            return el._id !== id
+                        })
+                        ohSnap('Record Removed', 'green')
+                        console.log(data, status);
+                    }).error(function(error, status) {
+                        ohSnap('Error Code: ' + status, 'red');
+                    });
+                }
+            }).modal('show');
+        }
+
+        function editHandler(id) {
+            var user = $cookies.get('auth');
+            var editor1, editor2, editor3;
+            $('.edit-modal.modal').modal({
+                onShow: function() {
+                    $('.essay.ui.accordion').accordion();
+                    editor1 = new Simditor({
+                        textarea: $('#essay1_editor'),
+                        upload: false,
+                        tabIndent: true,
+                        toolbar: [
+                            'bold',
+                            'italic',
+                            'underline',
+                            'ul',
+                            'blockquote',
+                            'hr'
+                        ],
+                        toolbarFloat: false,
+                        toolbarFloatOffset: 0,
+                        toolbarHidden: false,
+                        pasteImage: false
+                    });
+                    editor2 = new Simditor({
+                        textarea: $('#essay2_editor')
+                    });
+                    editor3 = new Simditor({
+                        textarea: $('#essay3_editor')
+                    });
+                },
+                onApprove: function() {
+                    debugger;
+                }
+            }).modal('show');
+        }
+        /**
          * Check to tell is school list empty
          * @returns {boolean}
          */
-        function isSchoolListEmpty () {
+        function isSchoolListEmpty() {
             return !vm.bookmarkedSchools.length > 0;
         }
 
@@ -1271,9 +1922,9 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
             // First Modal
             $('.dash-search-school.first.modal').modal({
-                onShow: function () {
+                onShow: function() {
                     addDropDown = $('.school-list.dropdown').dropdown({
-                        onChange: function (school) {
+                        onChange: function(school) {
                             vm.selectedSchool = school;
                         }
                     });
@@ -1282,10 +1933,10 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
             // Second Modal
             $('.dash-select-session.second.modal').modal({
-                onShow: function () {
+                onShow: function() {
                     $scope.$apply();
                 },
-                onHide: function () {
+                onHide: function() {
                     vm.selectedRound = '';
                     vm.selectedSchool = {};
                     addDropDown.dropdown('clear');
@@ -1300,7 +1951,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
          * Select round from modal. It Assigns the object corresponding to round number passed
          * @param round
          */
-        function selectRound ( round ) {
+        function selectRound(round) {
             vm.selectedRound = round;
         }
 
@@ -1309,7 +1960,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
          * @param round
          * @returns {boolean}
          */
-        function isSelected ( round ) {
+        function isSelected(round) {
             return vm.selectedRound === round;
         }
 
@@ -1317,7 +1968,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
          * check if item in bookmark modal dropdown is selected or not.
          * @returns {{}|*}
          */
-        function isDropdownSelected () {
+        function isDropdownSelected() {
             return vm.selectedSchool;
         }
 
@@ -1325,7 +1976,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
          * Show class profile on a new Modal
          * @param profile
          */
-        function getClassProfile (profile) {
+        function getClassProfile(profile) {
             vm.classProfile = profile;
             $('.class-profile.modal').modal('show');
         }
@@ -1337,8 +1988,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
          */
         function isBookmarked(school) {
             if (vm.bookmarkedSchools.length > 0) {
-                for ( var i = 0; i < vm.bookmarkedSchools.length; i++ ) {
-                    debugger;
+                for (var i = 0; i < vm.bookmarkedSchools.length; i++) {
                     if (vm.bookmarkedSchools[i]._id === school._id) {
                         return true;
                     }
@@ -1351,19 +2001,20 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
         /**
          * Controller Initializer
          */
-        function initController () {
+        function initController() {
 
             // Variable Initializations
-            schoolsService.rest.query(function (schools) {
+            schoolsService.rest.query(function(schools) {
                 vm.allSchools = schools;
             });
-            schoolsService.bookmarks.get({user_id: $cookies.get('auth')}, function (object) {
+            schoolsService.bookmarks.get({
+                user_id: $cookies.get('auth')
+            }, function(object) {
                 vm.bookmarkedSchools = object;
             });
         }
     }
 }());
-
 (function() {
     "use strict";
 
@@ -1375,6 +2026,7 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
     function dashboardRouter($stateProvider) {
         $stateProvider.state('dashboard', {
             parent: 'index',
+            data: {'requireAuth': true},
             url: '/dashboard',
             views: {
                 'content@': {
@@ -1480,90 +2132,6 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 
 }());
 
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminDashboard', AdminDashboardController);
-    //AdminDashboardController.$inject = ['$scope'];
-    function AdminDashboardController() {
-
-        // Local Variables
-        var vm = this;
-
-        vm.searchQuery = '';
-        vm.topSchools = [{
-            "id": 1,
-            "icon": "images/uni-badges/harvard.png",
-            "school": "Harvard University",
-            "address": "Cambridge, MA 02138, United States",
-            "applications":2390
-        }, {
-                "id": 2,
-                "icon": "images/uni-badges/cambridge.png",
-                "school": "Cambridge",
-                "address": "Cambridge, England, United Kingdom",
-                "applications":1130
-            }, {
-                "id": 3,
-                "icon": "images/uni-badges/stanford.png",
-                "school": "Stanford University",
-                "address": "450 Serra Mall, Stanford, CA 94305, United States",
-                "applications":890
-            },
-            {
-                "id": 4,
-                "icon": "images/uni-badges/mit.png",
-                "school": "MIT",
-                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
-                "applications":560
-            },
-            {
-                "id": 5,
-                "icon": "images/uni-badges/yale.png",
-                "school": "Yale University",
-                "address": "New Haven, CT 06520, Andorra",
-                "applications":400
-            }
-        ];
-
-
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminDashboardRouter);
-
-    AdminDashboardRouter.$inject = ['$stateProvider'];
-    function AdminDashboardRouter($stateProvider) {
-        $stateProvider.state('admindashboard', {
-            parent: 'index',
-            url: '/admin',
-            views: {
-                'content@': {
-                    templateUrl: 'components/admin-dashboard/admin-dashboard.tpl.html',
-                    controller: 'AdminDashboard',
-                    controllerAs: 'admindashboard'
-                }
-            }
-        });
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('');
-
-}());
 (function() {
 	'use strict';
 

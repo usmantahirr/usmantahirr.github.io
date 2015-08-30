@@ -258,33 +258,7 @@ a {
   background-color: #E9573F;
 }
 
-.dashboard-container {
-  width: 70%;
+.admin-dash-container {
+  width: 82%;
   margin: 25px auto;
-}
-
-.dash-add-school {
-  padding: 10px;
-}
-
-.country-filter {
-  float: right;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  margin-left: 10px;
-  width: 210px;
-}
-
-.round-filter {
-  float: right;
-  margin-top: 5px;
-  margin-bottom: 5px;
-  margin-left: 10px;
-  width: 197px;
-}
-
-.filterContainer {
-  display: inline-block;
-  margin-bottom: 15px;
-  width: 100%;
 }
