@@ -1009,8 +1009,8 @@ angular.module('ngSanitize').filter('linky', ['$sanitize', function($sanitize) {
 (function () {
     angular
         .module('mba-deadlines')
-        .value('BASE_URL', 'http://mba-deadlines.evennode.com');
-        // .value('BASE_URL', 'http://localhost:3000');
+//        .value('BASE_URL', 'http://mba-deadlines.evennode.com');
+        .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
 }());
 
 (function() {
