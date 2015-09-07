@@ -262,3 +262,14 @@ a {
   width: 82%;
   margin: 25px auto;
 }
+
+.label-help {
+  color: grey;
+  cursor: pointer;
+  font-size: 20px !important;
+}
+
+.three.wide.field.essay-req-field {
+  margin-top: 28px;
+  margin-left: 25px;
+}
