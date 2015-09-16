@@ -179,8 +179,8 @@
 (function () {
     angular
         .module('mba-deadlines')
-       .value('BASE_URL', 'http://localhost:3000');
-       //  .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
+       //.value('BASE_URL', 'http://localhost:3000');
+         .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
 }());
 
 (function() {
@@ -260,6 +260,165 @@
             rest: userResource,
             data: userData
         }
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminDeadlines', AdminDeadlines);
+    AdminDeadlines.$inject = ['schoolsService', '$rootScope'];
+    function AdminDeadlines (schoolsService, $rootScope) {
+
+        // Local Variables
+        var vm = this;
+
+        // Exposed Variables
+        vm.searchQuery = '';
+        vm.data = [];
+        vm.selectedSchool = {};
+        vm.selectedRoud = '';
+
+        // Exposed Functions
+        vm.addSchool = addSchool;
+        vm.selectRound = selectRound;
+        vm.isSelected = isSelected;
+
+        init();
+
+        function addSchool (school) {
+            vm.selectedSchool = school;
+            $('.uni-details-modal.ui.modal')
+                .modal({
+                    onHide: function () {
+                        vm.selectedRoud = '';
+                    }
+                })
+                .modal('show');
+        }
+
+        function selectRound ( round ) {
+            vm.selectedRoud = round;
+        }
+
+        function isSelected ( round ) {
+            return vm.selectedRoud === round;
+        }
+
+        function init() {
+            $rootScope.isLoading = true;
+            schoolsService.rest.query(function(schools) {
+                processDates(schools);
+                vm.data = schools;
+                $rootScope.isLoading = false;
+            });
+        }
+
+        function processDates(schools) {
+            for (var i = 0; i < schools.length; i++) {
+                schools[i].roundOne = new Date(schools[i].roundOne);
+                schools[i].roundTwo = new Date(schools[i].roundTwo);
+                schools[i].roundThree = new Date(schools[i].roundThree);
+                schools[i].roundFour = new Date(schools[i].roundFour);
+            }
+        }
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminDeadlinesRouter);
+
+    AdminDeadlinesRouter.$inject = ['$stateProvider'];
+    function AdminDeadlinesRouter($stateProvider) {
+        $stateProvider.state('adminDeadlines', {
+            parent: 'admindashboard',
+            url: '/deadlines',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-deadlines/admin-deadlines.tpl.html',
+                    controller: 'AdminDeadlines',
+                    controllerAs: 'aDeadlines'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminDeadlinesSvc', adminDeadlinesService);
+
+    adminDeadlinesService.$inject = ['BASE_URL', '$resource'];
+
+    function adminDeadlinesService (BASE_URL, $resource) {
+    	var deadlinesResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: deadlinesResource
+    	}
+    }
+
+}());
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminLogin', AdminLogin);
+
+    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
+    function AdminLogin(adminService, $cookies, $state) {
+        var vm = this;
+
+        vm.email = '';
+        vm.password = '';
+
+        vm.authenticate = function () {
+            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
+                if (admin) {
+                    $cookies.put('admin', admin._id);
+                    $state.go('admindashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+        };
+    }
+}());
+
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(dashboardRouter);
+
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('admin-login', {
+            parent: 'index',
+            url: '/admin-login',
+            data: {noNavbar: true},
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
+                    controller: 'AdminLogin',
+                    controllerAs: 'adminLogin'
+                }
+            }
+        });
     }
 
 }());
@@ -406,165 +565,6 @@
 
     	return {
     		rest: rankingsResource
-    	}
-    }
-
-}());
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminLogin', AdminLogin);
-
-    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
-    function AdminLogin(adminService, $cookies, $state) {
-        var vm = this;
-
-        vm.email = '';
-        vm.password = '';
-
-        vm.authenticate = function () {
-            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
-                if (admin) {
-                    $cookies.put('admin', admin._id);
-                    $state.go('admindashboard');
-                } else {
-                    ohSnap('Email/Password not valid', 'red');
-                }
-            });
-        };
-    }
-}());
-
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(dashboardRouter);
-
-    dashboardRouter.$inject = ['$stateProvider'];
-    function dashboardRouter($stateProvider) {
-        $stateProvider.state('admin-login', {
-            parent: 'index',
-            url: '/admin-login',
-            data: {noNavbar: true},
-            views: {
-                'content@': {
-                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
-                    controller: 'AdminLogin',
-                    controllerAs: 'adminLogin'
-                }
-            }
-        });
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminDeadlines', AdminDeadlines);
-    AdminDeadlines.$inject = ['schoolsService', '$rootScope'];
-    function AdminDeadlines (schoolsService, $rootScope) {
-
-        // Local Variables
-        var vm = this;
-
-        // Exposed Variables
-        vm.searchQuery = '';
-        vm.data = [];
-        vm.selectedSchool = {};
-        vm.selectedRoud = '';
-
-        // Exposed Functions
-        vm.addSchool = addSchool;
-        vm.selectRound = selectRound;
-        vm.isSelected = isSelected;
-
-        init();
-
-        function addSchool (school) {
-            vm.selectedSchool = school;
-            $('.uni-details-modal.ui.modal')
-                .modal({
-                    onHide: function () {
-                        vm.selectedRoud = '';
-                    }
-                })
-                .modal('show');
-        }
-
-        function selectRound ( round ) {
-            vm.selectedRoud = round;
-        }
-
-        function isSelected ( round ) {
-            return vm.selectedRoud === round;
-        }
-
-        function init() {
-            $rootScope.isLoading = true;
-            schoolsService.rest.query(function(schools) {
-                processDates(schools);
-                vm.data = schools;
-                $rootScope.isLoading = false;
-            });
-        }
-
-        function processDates(schools) {
-            for (var i = 0; i < schools.length; i++) {
-                schools[i].roundOne = new Date(schools[i].roundOne);
-                schools[i].roundTwo = new Date(schools[i].roundTwo);
-                schools[i].roundThree = new Date(schools[i].roundThree);
-                schools[i].roundFour = new Date(schools[i].roundFour);
-            }
-        }
-
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminDeadlinesRouter);
-
-    AdminDeadlinesRouter.$inject = ['$stateProvider'];
-    function AdminDeadlinesRouter($stateProvider) {
-        $stateProvider.state('adminDeadlines', {
-            parent: 'admindashboard',
-            url: '/deadlines',
-            views: {
-                'adminContent': {
-                    templateUrl: 'components/admin-dashboard/admin-deadlines/admin-deadlines.tpl.html',
-                    controller: 'AdminDeadlines',
-                    controllerAs: 'aDeadlines'
-                }
-            }
-        });
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('adminDeadlinesSvc', adminDeadlinesService);
-
-    adminDeadlinesService.$inject = ['BASE_URL', '$resource'];
-
-    function adminDeadlinesService (BASE_URL, $resource) {
-    	var deadlinesResource = $resource(BASE_URL + '');
-
-    	return {
-    		rest: deadlinesResource
     	}
     }
 
@@ -1750,6 +1750,48 @@
 
 }());
 
+(function() {
+	'use strict';
+
+	angular
+		.module('mba-deadlines')
+		.controller('LandingPage', LandingPageController);
+
+	function LandingPageController() {
+		var vm = this;
+
+		vm.launchModal = launchModal;
+
+		function launchModal () {
+			$('.how-it-works.ui.modal').modal('show');
+		}
+	}
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(landingPageRouter);
+
+    landingPageRouter.$inject = ['$stateProvider'];
+    function landingPageRouter($stateProvider) {
+        $stateProvider.state('landing-page', {
+            parent: 'index',
+            url: '/home',
+            views: {
+                'content@': {
+                    templateUrl: 'components/landing-page/landing-page.tpl.html',
+                    controller: 'LandingPage',
+                    controllerAs: 'LP'
+                }
+            }
+        });
+    }
+
+}());
+
 /**
  * Created by ghazala on 08/08/2015.
  */
@@ -1816,48 +1858,6 @@
 
 }());
 
-
-(function() {
-	'use strict';
-
-	angular
-		.module('mba-deadlines')
-		.controller('LandingPage', LandingPageController);
-
-	function LandingPageController() {
-		var vm = this;
-
-		vm.launchModal = launchModal;
-
-		function launchModal () {
-			$('.how-it-works.ui.modal').modal('show');
-		}
-	}
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(landingPageRouter);
-
-    landingPageRouter.$inject = ['$stateProvider'];
-    function landingPageRouter($stateProvider) {
-        $stateProvider.state('landing-page', {
-            parent: 'index',
-            url: '/home',
-            views: {
-                'content@': {
-                    templateUrl: 'components/landing-page/landing-page.tpl.html',
-                    controller: 'LandingPage',
-                    controllerAs: 'LP'
-                }
-            }
-        });
-    }
-
-}());
 
 (function() {
     'use strict';
