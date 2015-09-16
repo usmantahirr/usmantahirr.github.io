@@ -1,14 +1,1 @@
-<style>
-    .essay {
-        margin: 10px 10px;
-        height: 300px;
-    }
-    .essay .body {
-        height: 250px;
-        border: 1px solid lightgray;
-    }
-    .essay .subtitle {
-        color: grey;
-        font-size: 12px;
-    }
-</style><div class=dashboard-container><div class="ui active inverted dimmer" ng-show=essays.isLoading><div class="ui text loader">Loading</div></div><div class="ui stacked segment"><h1>Following Essays are required by</h1><div class=essay ng-repeat="essay in essays.data"><h3 class="name required">{{$index+1 }}) {{essay.question}} <span class=subtitle>Max {{essay.limit}} words</span></h3><div class=body><ng-quill-editor ng-model=essay.essay_data toolbar=true toolbar-entries="font size bold list bullet italic underline strike align color background" editor-required=true required={{essay.required}} error-class=input-error></ng-quill-editor></div></div><button class="ui button right">Save</button></div></div>
+<div class="ui active inverted dimmer" ng-show=essays.isLoading><div class="ui text loader">Loading</div></div><div class=dashboard-container><div class="ui stacked segment"><h1>Following Essays are required</h1><div class=essay ng-repeat="essay in essays.data"><h3 class=name>{{$index+1 }}) {{essay.question}} <span class=subtitle>Max {{essay.limit}} words</span> <span class=required ng-show=essay.required>*</span></h3><div class=body><ng-quill-editor ng-model=essay.essay_data toolbar=true toolbar-entries="font size bold list bullet italic underline strike align color background" editor-required=true required={{essay.required}} error-class=input-error></ng-quill-editor></div><div class=action-area><button class="ui right blue labeled icon button" ng-show=essay._id ng-click=essays.update(essay) ng-class="{'loading':essays.crudInProgress}"><i class="right arrow icon"></i> Update</button> <button class="ui right blue labeled icon button" ng-hide=essay._id ng-click=essays.add(essay) ng-class="{'loading':essays.crudInProgress}"><i class="right arrow icon"></i> Save</button></div><div class=clear-fix></div></div></div></div>

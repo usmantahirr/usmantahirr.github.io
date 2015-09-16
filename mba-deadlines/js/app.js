@@ -12,6 +12,7 @@
     function runBlock($rootScope, $state, $cookies) {
         $rootScope.authorized = false;
         $rootScope.admin = false;
+        $rootScope.hideNavbar = false;
 
         $rootScope.$on('$stateChangeStart', function (event, toState, toStateParams) {
             if (toState.redirectTo) {
@@ -19,12 +20,14 @@
                 $state.go(toState.redirectTo);
             }
 
+            // get user login
             if (!$cookies.get('auth')) {
                 $rootScope.authorized = false;
             } else {
                 $rootScope.authorized = true;
             }
 
+            // get admin login
             if (!$cookies.get('admin')) {
                 $rootScope.admin = false;
             } else {
@@ -34,14 +37,25 @@
 
         $rootScope.$on('$stateChangeSuccess', function (event, toState, toStateParams) {
             if (toState.data) {
+
+                // hide nav bar from admin login
+                if (toState.data.noNavbar) {
+                    $rootScope.hideNavbar = true;
+                } else {
+                    $rootScope.hideNavbar = false;
+                }
+
+                // Check for user login
                 if (toState.data.requireAuth) {
                     if (!$rootScope.authorized) {
                         console.log('not auth');
                         $state.go('login');
                     }
-                } else if (toState.data.admin) {
+                }
+                // check for admin login
+                if (toState.data.requireAdminAuth) {
                     if (!$rootScope.admin) {
-                        $state.go('admin-login');
+                        $state.go('landing-page');
                     }
                 }
             }
@@ -69,48 +83,49 @@
         delete $httpProvider.defaults.headers.common['X-Requested-With'];
     }
 }());
-(function() {
-	'use strict';
 
-	angular
-		.module('mba-deadlines')
-		.controller('Navigation', NavigationController);
+(function () {
+    'use strict';
 
-	NavigationController.$inject = ['$state', '$cookies', '$rootScope'];
-	function NavigationController($state, $cookies, $rootScope) {
+    angular
+        .module('mba-deadlines')
+        .controller('Navigation', NavigationController);
 
-		// Local Variables
-		var vm = this;
+    NavigationController.$inject = ['$state', '$cookies', '$rootScope'];
+    function NavigationController($state, $cookies, $rootScope) {
 
-		// Exposed Variables
-		vm.state = $state;
+        // Local Variables
+        var vm = this;
 
-		// Exposed Functions
-		vm.isLandingPage = isLandingPage;
-		vm.isLoginPage = isLoginPage;
-		vm.isSignupPage = isSignupPage;
-		vm.signout = signout;
+        // Exposed Variables
+        vm.state = $state;
 
-		// Implementations
-		function isLandingPage() {
-			return vm.state.is('landing-page');
-		}
+        // Exposed Functions
+        vm.isLandingPage = isLandingPage;
+        vm.isLoginPage = isLoginPage;
+        vm.isSignupPage = isSignupPage;
+        vm.signout = signout;
 
-		function isLoginPage() {
-			return vm.state.is('login');
-		}
+        // Implementations
+        function isLandingPage() {
+            return vm.state.is('landing-page');
+        }
 
-		function isSignupPage() {
-			return vm.state.is('signup');
-		}
+        function isLoginPage() {
+            return vm.state.is('login');
+        }
 
-		function signout() {
-			$cookies.remove('auth');
-			$rootScope.authorized = false;
-			$rootScope.portalUser = {};
-			$state.go('landing-page');
-		}
-	}
+        function isSignupPage() {
+            return vm.state.is('signup');
+        }
+
+        function signout() {
+            $cookies.remove('auth');
+            $rootScope.authorized = false;
+            $rootScope.portalUser = {};
+            $state.go('landing-page');
+        }
+    }
 }());
 
 (function() {
@@ -142,11 +157,25 @@
         .module('mba-deadlines')
         .factory('adminService', adminService);
 
-    function adminService () {
+    adminService.$inject = ['BASE_URL', '$resource', '$cookies', '$state', '$rootScope'];
+    function adminService (BASE_URL, $resource, $cookies, $state, $rootScope) {
 
+        var adminResource = $resource(BASE_URL + '/admin');
+
+        function adminLogout () {
+            $cookies.remove('admin');
+            $rootScope.admin = false;
+            $state.go('landing-page');
+        }
+
+        return {
+            rest: adminResource,
+            logout: adminLogout
+        };
     }
 
 }());
+
 (function () {
     angular
         .module('mba-deadlines')
@@ -159,12 +188,35 @@
 
     angular
         .module('mba-deadlines')
+        .factory('essayService', essayService);
+
+    essayService.$inject = ['BASE_URL', '$resource'];
+    function essayService (BASE_URL, $resource) {
+
+        var schoolResource = $resource(BASE_URL + '/essays/:user_id/:school_id/:essay_id', {}, {
+            update: {
+                method: 'PUT'
+            }
+        });
+
+        return {
+            rest: schoolResource
+        };
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
         .factory('schoolsService', schoolsService);
 
     schoolsService.$inject = ['BASE_URL', '$resource'];
     function schoolsService (BASE_URL, $resource) {
 
-        var schoolResource = $resource(BASE_URL + '/schools', {});
+        var schoolResource = $resource(BASE_URL + '/schools/:school_id');
         var bookmarkedResource = $resource(BASE_URL + '/bookmarks/:user_id', {}, {
             get: {
                 method: 'GET',
@@ -175,12 +227,10 @@
             }
         });
 
-        var classProfileResource = $resource(BASE_URL + '/class-profile/:id', {});
 
         return {
             rest: schoolResource,
-            bookmarks: bookmarkedResource,
-            classProfile: classProfileResource
+            bookmarks: bookmarkedResource
         };
     }
 
@@ -210,148 +260,6 @@
             rest: userResource,
             data: userData
         }
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminDeadlines', AdminDeadlines);
-    AdminDeadlines.$inject = ['schoolsService', '$rootScope'];
-    function AdminDeadlines (schoolsService, $rootScope) {
-
-        // Local Variables
-        var vm = this;
-
-        // Exposed Variables
-        vm.searchQuery = '';
-        vm.data = [];
-        vm.selectedSchool = {};
-        vm.selectedRoud = '';
-
-        // Exposed Functions
-        vm.addSchool = addSchool;
-        vm.selectRound = selectRound;
-        vm.isSelected = isSelected;
-
-        init();
-
-        function addSchool (school) {
-            vm.selectedSchool = school;
-            $('.uni-details-modal.ui.modal')
-                .modal({
-                    onHide: function () {
-                        vm.selectedRoud = '';
-                    }
-                })
-                .modal('show');
-        }
-
-        function selectRound ( round ) {
-            vm.selectedRoud = round;
-        }
-
-        function isSelected ( round ) {
-            return vm.selectedRoud === round;
-        }
-
-        function init() {
-            $rootScope.isLoading = true;
-            schoolsService.rest.query(function(schools) {
-                processDates(schools);
-                vm.data = schools;
-                $rootScope.isLoading = false;
-            });
-        }
-
-        function processDates(schools) {
-            for (var i = 0; i < schools.length; i++) {
-                schools[i].roundOne = new Date(schools[i].roundOne);
-                schools[i].roundTwo = new Date(schools[i].roundTwo);
-                schools[i].roundThree = new Date(schools[i].roundThree);
-                schools[i].roundFour = new Date(schools[i].roundFour);
-            }
-        }
-
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminDeadlinesRouter);
-
-    AdminDeadlinesRouter.$inject = ['$stateProvider'];
-    function AdminDeadlinesRouter($stateProvider) {
-        $stateProvider.state('adminDeadlines', {
-            parent: 'admindashboard',
-            url: '/deadlines',
-            views: {
-                'adminContent': {
-                    templateUrl: 'components/admin-dashboard/admin-deadlines/admin-deadlines.tpl.html',
-                    controller: 'AdminDeadlines',
-                    controllerAs: 'aDeadlines'
-                }
-            }
-        });
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('adminDeadlinesSvc', adminDeadlinesService);
-
-    adminDeadlinesService.$inject = ['BASE_URL', '$resource'];
-
-    function adminDeadlinesService (BASE_URL, $resource) {
-    	var deadlinesResource = $resource(BASE_URL + '');
-
-    	return {
-    		rest: deadlinesResource
-    	}
-    }
-
-}());
-(function () {
-	"use strict";
-
-	angular
-		.module('mba-deadlines')
-		.controller('AdminLogin', AdminLogin);
-
-	function AdminLogin() {
-		console.log('admin-login');
-	}
-}());
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(dashboardRouter);
-
-    dashboardRouter.$inject = ['$stateProvider'];
-    function dashboardRouter($stateProvider) {
-        $stateProvider.state('admin-login', {
-            parent: 'index',
-            url: '/admin-login',
-            views: {
-                'content@': {
-                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
-                    controller: 'AdminLogin',
-                    controllerAs: 'admin-login'
-                }
-            }
-        });
     }
 
 }());
@@ -503,14 +411,173 @@
 
 }());
 (function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminLogin', AdminLogin);
+
+    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
+    function AdminLogin(adminService, $cookies, $state) {
+        var vm = this;
+
+        vm.email = '';
+        vm.password = '';
+
+        vm.authenticate = function () {
+            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
+                if (admin) {
+                    $cookies.put('admin', admin._id);
+                    $state.go('admindashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+        };
+    }
+}());
+
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(dashboardRouter);
+
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('admin-login', {
+            parent: 'index',
+            url: '/admin-login',
+            data: {noNavbar: true},
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
+                    controller: 'AdminLogin',
+                    controllerAs: 'adminLogin'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminDeadlines', AdminDeadlines);
+    AdminDeadlines.$inject = ['schoolsService', '$rootScope'];
+    function AdminDeadlines (schoolsService, $rootScope) {
+
+        // Local Variables
+        var vm = this;
+
+        // Exposed Variables
+        vm.searchQuery = '';
+        vm.data = [];
+        vm.selectedSchool = {};
+        vm.selectedRoud = '';
+
+        // Exposed Functions
+        vm.addSchool = addSchool;
+        vm.selectRound = selectRound;
+        vm.isSelected = isSelected;
+
+        init();
+
+        function addSchool (school) {
+            vm.selectedSchool = school;
+            $('.uni-details-modal.ui.modal')
+                .modal({
+                    onHide: function () {
+                        vm.selectedRoud = '';
+                    }
+                })
+                .modal('show');
+        }
+
+        function selectRound ( round ) {
+            vm.selectedRoud = round;
+        }
+
+        function isSelected ( round ) {
+            return vm.selectedRoud === round;
+        }
+
+        function init() {
+            $rootScope.isLoading = true;
+            schoolsService.rest.query(function(schools) {
+                processDates(schools);
+                vm.data = schools;
+                $rootScope.isLoading = false;
+            });
+        }
+
+        function processDates(schools) {
+            for (var i = 0; i < schools.length; i++) {
+                schools[i].roundOne = new Date(schools[i].roundOne);
+                schools[i].roundTwo = new Date(schools[i].roundTwo);
+                schools[i].roundThree = new Date(schools[i].roundThree);
+                schools[i].roundFour = new Date(schools[i].roundFour);
+            }
+        }
+
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminDeadlinesRouter);
+
+    AdminDeadlinesRouter.$inject = ['$stateProvider'];
+    function AdminDeadlinesRouter($stateProvider) {
+        $stateProvider.state('adminDeadlines', {
+            parent: 'admindashboard',
+            url: '/deadlines',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-deadlines/admin-deadlines.tpl.html',
+                    controller: 'AdminDeadlines',
+                    controllerAs: 'aDeadlines'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminDeadlinesSvc', adminDeadlinesService);
+
+    adminDeadlinesService.$inject = ['BASE_URL', '$resource'];
+
+    function adminDeadlinesService (BASE_URL, $resource) {
+    	var deadlinesResource = $resource(BASE_URL + '');
+
+    	return {
+    		rest: deadlinesResource
+    	}
+    }
+
+}());
+(function () {
     'use strict';
 
     angular
         .module('mba-deadlines')
         .controller('AdminSchools', AdminSchoolsController);
-    AdminSchoolsController.$inject = ['schoolsService', '$http', 'BASE_URL', '$rootScope', '$scope'];
+    AdminSchoolsController.$inject = ['schoolsService', '$http', 'BASE_URL', '$rootScope', '$scope', 'adminSchoolsSvc'];
 
-    function AdminSchoolsController(schoolsService, $http, BASE_URL, $rootScope, $scope) {
+    function AdminSchoolsController(schoolsService, $http, BASE_URL, $rootScope, $scope, adminSchoolsSvc) {
 
         // Local Variables
         var vm = this;
@@ -518,7 +585,10 @@
         // Exposed Variables
         vm.searchQuery = '';
         vm.allSchools = [];
-        vm.isUS = true;
+        vm.isUS = false;
+
+        vm.tempEssayFlag = false;
+        vm.tempEssay = {};
 
         vm.selectedSchool = {};
         vm.mode = '';
@@ -529,8 +599,11 @@
         vm.addSchool = addSchool;
         vm.updateSchool = updateSchool;
 
+        vm.addEssay = addTempEssay;
+        vm.acceptEssay = pushTempEssay;
+        vm.discardEssay = discardTempEssay;
 
-        function initController() {
+        function initController () {
             $rootScope.isLoading = true;
             schoolsService.rest.query(function (schools) {
                 vm.allSchools = schools;
@@ -538,54 +611,90 @@
             });
         }
 
-        function showSchool(mode, school) {
+        function discardTempEssay () {
+            vm.tempEssay = {};
+            vm.tempEssayFlag = false;
+        }
+        function pushTempEssay () {
+            if (!vm.selectedSchool.essays) {
+                vm.selectedSchool.essays = [];
+            }
+            vm.selectedSchool.essays.push(vm.tempEssay);
+            vm.tempEssayFlag = false;
+        }
+        function addTempEssay () {
+            vm.tempEssayFlag = true;
+        }
+
+        function updateState(code, state) {
+            vm.selectedSchool.state = code;
+        }
+
+        function updateCountry(code, country) {
+            if (country) {
+                var cont = country;
+                vm.isUS = code === 'us';
+
+                var ci = cont.indexOf('i>');
+                cont = cont.slice(ci + 2);
+
+                vm.selectedSchool.country = {
+                    code: code,
+                    name: cont
+                };
+            }
+        }
+
+        function showSchool (mode, school) {
 
             $('.label-help').popup({
                 title: 'Rank Status',
                 content: 'Comparison about rank going up, down or is constant as last years ratting.'
             });
 
+            $('.add-essay').popup({
+                title: 'Add Essay',
+                content: 'Add new Essay topic?'
+            });
+
+
             if (mode === 'edit') {
                 vm.selectedSchool = school;
                 vm.mode = 'Edit';
+
+                $('.country.ui.dropdown').dropdown({
+                    onChange: function (code, country) {
+                        updateCountry(code, country);
+                    }
+                }).dropdown('set selected', vm.selectedSchool.country.code);
+
+                $('.state.ui.dropdown').dropdown({
+                    onChange: function (code, state) {
+                        updateState(code, state);
+                    }
+                }).dropdown('set selected', vm.selectedSchool.state);
+
+
             } else if (mode === 'add') {
                 vm.selectedSchool = {};
-                vm.mode = 'Add'
+                vm.mode = 'Add';
+                $('.country.ui.dropdown').dropdown({
+                    onChange: function (code, country) {
+                        updateCountry(code, country);
+                    }
+                });
+
+                $('.state.ui.dropdown').dropdown({
+                    onChange: function (code, state) {
+                        updateState(code, state);
+                    }
+                });
             }
 
             $('.add-modal.ui.modal').modal({
                 closable: false,
                 onShow: function () {
-                    convertAllRounds(vm.selectedSchool);
-
-                    if (vm.selectedSchool.state) {
-                        $('.state.ui.dropdown').dropdown({
-                            onChange: function (code) {
-                                if (code) {
-                                    vm.selectedSchool.state = code;
-                                    debugger;
-                                }
-                            }
-                        }).dropdown('set selected', vm.selectedSchool.state);
-                    }
-
-                    if (vm.selectedSchool.country) {
-                        $('.country.ui.dropdown').dropdown({
-                            onChange: function (code, country) {
-                                if (code) {
-                                    var cont = country;
-                                    vm.isUS = code === 'us';
-
-                                    var ci = cont.indexOf('i>');
-                                    cont = cont.slice(ci + 2);
-                                    vm.selectedSchool.country = {
-                                        code: code,
-                                        country: cont
-                                    };
-                                }
-                            }
-                        }).dropdown('set selected', vm.selectedSchool.country.code);
-                    }
+                    convertAllDates(vm.selectedSchool, false);
                 },
 
                 onHide: function () {
@@ -595,24 +704,33 @@
                     return true;
                 },
                 onApprove: function () {
-
+                    if (vm.mode === 'Edit') {
+                        updateSchool();
+                    }
+                    if (vm.mode === "Add") {
+                        addSchool();
+                    }
                     return true;
                 }
             }).modal('show');
         }
 
-        $scope.$watch('vm.selectedSchool.roundOne', function () {
-            debugger;
-        });
+        $scope.$watch('vm.selectedSchool.roundOne', function () {});
 
         // POST Request for adding new school
         function addSchool() {
-
+            adminSchoolsSvc.rest.save(vm.selectedSchool, function () {
+                refreshPage();
+                ohSnap('Record Added', 'Green');
+            });
         }
 
         // PUT Requiest for updating already existed school
         function updateSchool() {
-
+            adminSchoolsSvc.rest.update({'school_id': vm.selectedSchool._id},vm.selectedSchool, function (obj) {
+                refreshPage();
+                ohSnap(obj.Success, 'Green');
+            });
         }
 
         /**
@@ -626,11 +744,13 @@
                         // vm.bookmarkedSchools = vm.bookmarkedSchools.filter(function(el) {
                         //     return el._id !== id
                         // })
+                        refreshPage();
                         ohSnap('Record Removed', 'green');
                         console.log(data, status);
                     }).error(function (error, status) {
                         ohSnap('Error Code: ' + status, 'red');
                     });
+
                 }
             }).modal('show');
         }
@@ -638,39 +758,52 @@
         /**
          * Convert BSON ISO Date to UTC String
          * @param date BSON ISO
+         * @param isDate is it a date or string. if date, convert to string, else convert to UTC
+         * if false, it will return date, if true, it will return string
          * @returns {Date} UTC
          */
-        function convertDate(date) {
-            return new Date(date);
+        function convertDate (date, isDate) {
+            if (!isDate) {
+                return new Date(date);
+            }
+            return date.toString();
         }
 
-        function convertAllRounds(selectedSchool) {
+        function convertAllDates(selectedSchool, isDate) {
             // Round One
             if (selectedSchool.roundOne) {
-                selectedSchool.roundOne = convertDate(selectedSchool.roundOne);
+                selectedSchool.roundOne = convertDate(selectedSchool.roundOne, isDate);
             }
 
             // Round Two
             if (selectedSchool.roundTwo) {
-                selectedSchool.roundTwo = convertDate(selectedSchool.roundTwo);
+                selectedSchool.roundTwo = convertDate(selectedSchool.roundTwo, isDate);
             }
 
             // Round Three
             if (selectedSchool.roundThree) {
-                selectedSchool.roundThree = convertDate(selectedSchool.roundThree);
+                selectedSchool.roundThree = convertDate(selectedSchool.roundThree, isDate);
             }
 
             // Round Four
             if (selectedSchool.roundFour) {
-                selectedSchool.roundFour = convertDate(selectedSchool.roundFour);
+                selectedSchool.roundFour = convertDate(selectedSchool.roundFour, isDate);
             }
         }
 
         function clearAll() {
+            console.log('hidden');
             vm.selectedSchool = {};
             vm.mode = '';
-            $('.country.ui.dropdown').dropdown('clear').dropdown('refresh');
-            $('.state.ui.dropdown').dropdown('clear').dropdown('refresh');
+            vm.tempEssayFlag = false;
+            vm.tempEssay = {};
+            $('.ui.dropdown').dropdown('clear');
+            $('.country.ui.dropdown').dropdown('clear');
+            $('.state.ui.dropdown').dropdown('clear');
+        }
+
+        function refreshPage () {
+            initController();
         }
 
         initController();
@@ -678,6 +811,7 @@
 
     }
 }());
+
 (function() {
     "use strict";
 
@@ -712,11 +846,13 @@
     adminSchoolsSvc.$inject = ['BASE_URL', '$resource'];
 
     function adminSchoolsSvc (BASE_URL, $resource) {
-    	var rankingsResource = $resource(BASE_URL + '');
+        var rankingsResource = $resource(BASE_URL + '/schools/:school_id', {}, {
+            update: {method: 'PUT'}
+        });
 
-    	return {
-    		rest: rankingsResource
-    	}
+        return {
+            rest: rankingsResource
+        }
     }
 
 }());
@@ -1078,49 +1214,11 @@
     angular
         .module('mba-deadlines')
         .controller('AdminDashboard', AdminDashboardController);
-    //AdminDashboardController.$inject = ['$scope'];
-    function AdminDashboardController() {
-
-        // Local Variables
-        var vm = this;
-
-        vm.searchQuery = '';
-        vm.topSchools = [{
-            "id": 1,
-            "icon": "images/uni-badges/harvard.png",
-            "school": "Harvard University",
-            "address": "Cambridge, MA 02138, United States",
-            "applications":2390
-        }, {
-                "id": 2,
-                "icon": "images/uni-badges/cambridge.png",
-                "school": "Cambridge",
-                "address": "Cambridge, England, United Kingdom",
-                "applications":1130
-            }, {
-                "id": 3,
-                "icon": "images/uni-badges/stanford.png",
-                "school": "Stanford University",
-                "address": "450 Serra Mall, Stanford, CA 94305, United States",
-                "applications":890
-            },
-            {
-                "id": 4,
-                "icon": "images/uni-badges/mit.png",
-                "school": "MIT",
-                "address": "77 Massachusetts Ave, Cambridge, MA 02139, United States",
-                "applications":560
-            },
-            {
-                "id": 5,
-                "icon": "images/uni-badges/yale.png",
-                "school": "Yale University",
-                "address": "New Haven, CT 06520, Andorra",
-                "applications":400
-            }
-        ];
-
-
+    AdminDashboardController.$inject = ['adminService'];
+    function AdminDashboardController(adminService) {
+        this.adminLogout = function () {
+            adminService.logout();
+        }
     }
 }());
 
@@ -1135,6 +1233,7 @@
     function AdminDashboardRouter($stateProvider) {
         $stateProvider.state('admindashboard', {
             parent: 'index',
+            data: {requireAdminAuth: true, noNavbar: true},
             url: '/admin',
             redirectTo: 'adminStats',
             views: {
@@ -1343,6 +1442,7 @@
                 onShow: function() {
                     addDropDown = $('.school-list.dropdown').dropdown({
                         onChange: function(school) {
+                            debugger;
                             vm.selectedSchool = school;
                         }
                     });
@@ -1407,35 +1507,12 @@
         function isBookmarked(school) {
             if (vm.bookmarkedSchools.length > 0) {
                 for (var i = 0; i < vm.bookmarkedSchools.length; i++) {
-                    if (vm.bookmarkedSchools[i]._id === school._id) {
+                    if (vm.bookmarkedSchools[i].school_id === school._id) {
                         return true;
                     }
                 }
             }
-
             return false;
-        }
-
-        /**
-         * Date Processor
-         * @param schools
-         */
-        function processDates(schools) {
-            for (var i = 0; i < schools.length; i++) {
-                schools[i].roundOne = new Date(schools[i].roundOne);
-                schools[i].roundTwo = new Date(schools[i].roundTwo);
-                schools[i].roundThree = new Date(schools[i].roundThree);
-                schools[i].roundFour = new Date(schools[i].roundFour);
-            }
-        }
-        function processBookmarkDates(bookmarks) {
-            for (var i = 0; i < bookmarks.length; i++) {
-                bookmarks[i].roundOne = new Date(bookmarks[i].roundOne);
-                bookmarks[i].roundTow = new Date(bookmarks[i].roundTow);
-                bookmarks[i].roundThree = new Date(bookmarks[i].roundThree);
-                bookmarks[i].roundFour= new Date(bookmarks[i].roundFour);
-                bookmarks[i].selectedRound = new Date(bookmarks[i].selectedRound);
-            }
         }
 
         /**
@@ -1447,13 +1524,11 @@
 
             // Variable Initializations
             schoolsService.rest.query(function(schools) {
-                processDates(schools);
                 vm.allSchools = schools;
             });
             schoolsService.bookmarks.get({
                 user_id: $cookies.get('auth')
             }, function(object) {
-                processBookmarkDates(object);
                 vm.bookmarkedSchools = object;
                 vm.isLoading = false;
             });
@@ -1481,6 +1556,7 @@
         });
     }
 }());
+
 (function() {
     "use strict";
 
@@ -1539,36 +1615,52 @@
         .module('mba-deadlines')
         .controller('Essays', essaysController);
 
-    essaysController.$inject = ['$scope'];
-    function essaysController($scope) {
+    essaysController.$inject = ['$scope', '$cookies', '$stateParams', 'essayService'];
+    function essaysController($scope, $cookies, $stateParams, essayService) {
         var vm = this;
 
-        vm.data = [
-            {
-                "_id": "adasdsadasdasdasdasdasd",
-                "user_id": "dadauiyee892y31",
-                "school_id": "asd213asd21hdju",
-                "essay_data": "Some bloody passion",
-                "required": true,
-                "limit": 100,
-                "question": "What is you passion"
-            },
-            {
-                "_id": "2313sadasdasdasdasdasd",
-                "user_id": "dsadiyee892y31",
-                "school_id": "asdsdasd21hdju",
-                "essay_data": "Some bloody name",
-                "required": true,
-                "limit": 100,
-                "question": "What is you lol"
-            }
-        ];
+        vm.data = [];
+        vm.isLoading = true;
+        vm.crudInProgress = false;
 
-        vm.isLoading = false;
+        vm.add = addEssay;
+        vm.update = updateEssay;
 
-        $scope.$watch('essays', function (nv, ov) {
-            console.log(ov);
-        });
+        initController();
+
+        function addEssay(essay) {
+            vm.crudInProgress = true;
+            essay.school_id = $stateParams.s_id;
+            essay.user_id = $cookies.get('auth');
+            delete essay.question;
+            delete essay.limit;
+            delete essay.required;
+            essayService.rest.save(essay, function () {
+                vm.crudInProgress = false;
+                initController();
+            });
+
+        }
+
+        function updateEssay(essay) {
+            vm.crudInProgress = true;
+            delete essay.question;
+            delete essay.limit;
+            delete essay.required;
+            essayService.rest.update({'essay_id': essay._id}, essay, function (obj) {
+                vm.crudInProgress = false;
+                initController();
+            });
+        }
+
+        function initController () {
+            vm.isLoading = true;
+            essayService.rest.query({'school_id': $stateParams.s_id, 'user_id': $cookies.get('auth')}, function(object) {
+                vm.data = object;
+                vm.isLoading = false;
+            });
+        }
+
     }
 }());
 (function() {
@@ -1623,19 +1715,9 @@
             return vm.selectedRoud === round;
         }
 
-        function processDates(schools) {
-            for (var i = 0; i < schools.length; i++) {
-                schools[i].roundOne = new Date(schools[i].roundOne);
-                schools[i].roundTwo = new Date(schools[i].roundTwo);
-                schools[i].roundThree = new Date(schools[i].roundThree);
-                schools[i].roundFour = new Date(schools[i].roundFour);
-            }
-        }
-
         function init() {
             vm.isLoading = true;
             schoolsService.rest.query(function(schools) {
-                processDates(schools);
                 vm.data = schools;
                 vm.isLoading = false;
             });
@@ -1667,6 +1749,73 @@
     }
 
 }());
+
+/**
+ * Created by ghazala on 08/08/2015.
+ */
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('Login', LoginController);
+    LoginController.$inject = ['$state', '$cookies', 'userService', '$rootScope'];
+
+    function LoginController($state, $cookies, userService, $rootScope) {
+        var vm = this;
+
+        // Exposed Variables
+        vm.email = '';
+        vm.password = '';
+        vm.rememberFlag = false;
+
+        // Exposed Methods
+        vm.auth = login;
+
+        function login() {
+
+            userService.rest.post({email: vm.email, password: vm.password}, function (obj) {
+                if (obj._id) {
+                    $cookies.put('auth', obj._id);
+                    $rootScope.portalUser = obj;
+                    $state.go('dashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+        }
+
+    }
+}());
+
+/**
+ * Created by ghazala on 08/08/2015.
+ */
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(loginRouter);
+
+    loginRouter.$inject = ['$stateProvider'];
+    function loginRouter($stateProvider) {
+        $stateProvider.state('login', {
+            parent: 'index',
+            url: '/login',
+            views: {
+                'content@': {
+                    templateUrl: 'components/login/login.tpl.html',
+                    controller: 'Login',
+                    controllerAs: 'login'
+                }
+            }
+        });
+    }
+
+}());
+
 
 (function() {
 	'use strict';
@@ -1709,75 +1858,6 @@
     }
 
 }());
-
-/**
- * Created by ghazala on 08/08/2015.
- */
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('Login', LoginController);
-    LoginController.$inject = ['$state', '$cookies', 'userService', '$rootScope'];
-
-    function LoginController($state, $cookies, userService, $rootScope) {
-        var vm = this;
-
-        // Exposed Variables
-        vm.email = '';
-        vm.password = '';
-        vm.rememberFlag = false;
-
-        // Exposed Methods
-        vm.auth = login;
-
-        function login() {
-
-            userService.rest.post({email: vm.email, password: vm.password}, function (obj) {
-                if (obj._id) {
-                    $cookies.put('auth', obj._id);
-                    $rootScope.portalUser = obj;
-                    $state.go('dashboard');
-                } else {
-                    ohSnap('Email/Password not valid', 'red');
-                }
-            });
-            //$cookies.put('auth', 'true');
-            // $state.go('dashboard');
-        }
-
-    }
-}());
-
-/**
- * Created by ghazala on 08/08/2015.
- */
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(loginRouter);
-
-    loginRouter.$inject = ['$stateProvider'];
-    function loginRouter($stateProvider) {
-        $stateProvider.state('login', {
-            parent: 'index',
-            url: '/login',
-            views: {
-                'content@': {
-                    templateUrl: 'components/login/login.tpl.html',
-                    controller: 'Login',
-                    controllerAs: 'login'
-                }
-            }
-        });
-    }
-
-}());
-
 
 (function() {
     'use strict';
