@@ -505,6 +505,91 @@
 
 }());
 
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminRankings', AdminRankings);
+     AdminRankings.$inject = ['schoolsService', '$rootScope'];
+    function AdminRankings(schoolsService, $rootScope) {
+
+        var vm = this;
+
+        vm.searchQuery = '';
+
+        vm.data = [];
+
+        init();
+
+        vm.getRankStatus = getRankStatus;
+
+        function getRankStatus (status) {
+            var ret = '';
+            if (status === 'up') {
+                ret = 'up green';
+            } else if (status === 'down') {
+                ret = 'down red';
+            } else {
+                ret = 'minus yellow';
+            }
+            return ret;
+        }
+
+        function init() {
+            $rootScope.isLoading = true;
+            schoolsService.rest.query(function(schools) {
+                debugger;
+                vm.data = schools;
+                $rootScope.isLoading = false;
+            });
+        }
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminRankingsRouter);
+
+    AdminRankingsRouter.$inject = ['$stateProvider'];
+    function AdminRankingsRouter($stateProvider) {
+        $stateProvider.state('adminRankings', {
+            parent: 'admindashboard',
+            url: '/rankings',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
+                    controller: 'AdminRankings',
+                    controllerAs: 'adminRankings'
+                }
+            }
+        });
+    }
+
+}());
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminRankingsSvc', adminRankingsSvc);
+
+    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminRankingsSvc(BASE_URL, $resource) {
+        var rankingsResource = $resource(BASE_URL + '');
+
+        return {
+            rest: rankingsResource
+        }
+    }
+
+}());
+
 (function () {
     'use strict';
 
@@ -835,91 +920,6 @@
     }
 
 }());
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminRankings', AdminRankings);
-     AdminRankings.$inject = ['schoolsService', '$rootScope'];
-    function AdminRankings(schoolsService, $rootScope) {
-
-        var vm = this;
-
-        vm.searchQuery = '';
-
-        vm.data = [];
-
-        init();
-
-        vm.getRankStatus = getRankStatus;
-
-        function getRankStatus (status) {
-            var ret = '';
-            if (status === 'up') {
-                ret = 'up green';
-            } else if (status === 'down') {
-                ret = 'down red';
-            } else {
-                ret = 'minus yellow';
-            }
-            return ret;
-        }
-
-        function init() {
-            $rootScope.isLoading = true;
-            schoolsService.rest.query(function(schools) {
-                debugger;
-                vm.data = schools;
-                $rootScope.isLoading = false;
-            });
-        }
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminRankingsRouter);
-
-    AdminRankingsRouter.$inject = ['$stateProvider'];
-    function AdminRankingsRouter($stateProvider) {
-        $stateProvider.state('adminRankings', {
-            parent: 'admindashboard',
-            url: '/rankings',
-            views: {
-                'adminContent': {
-                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
-                    controller: 'AdminRankings',
-                    controllerAs: 'adminRankings'
-                }
-            }
-        });
-    }
-
-}());
-
-(function () {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('adminRankingsSvc', adminRankingsSvc);
-
-    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
-
-    function adminRankingsSvc(BASE_URL, $resource) {
-        var rankingsResource = $resource(BASE_URL + '');
-
-        return {
-            rest: rankingsResource
-        }
-    }
-
-}());
-
 (function() {
     'use strict';
 
@@ -2207,6 +2207,20 @@
             vm.isLoading = true;
             userService.data.get({id: $cookies.get('auth')}).$promise.then(function (data) {
                 vm.user = data;
+
+                if (!vm.user.student_profile) {
+                    vm.user.student_profile = {
+                        gre: {},
+                        gat: {}
+                    };
+                }
+                if (!vm.user.work_experience) {
+                    vm.user.work_experience = {};
+                }
+                if (!vm.user.education) {
+                    vm.user.education = {};
+                }
+
                 if (vm.user.dob) {
                     vm.user.dob = new Date(vm.user.dob);
                 }
