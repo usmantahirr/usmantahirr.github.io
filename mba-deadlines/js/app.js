@@ -286,6 +286,65 @@
 
 }());
 
+(function () {
+    angular
+        .module('mba-deadlines')
+        .value('MBA_INDUSTRIES', [
+            "Accounting",
+            "Advertising and PR",
+            "Aerospace and Defense",
+            "Commercial Banking",
+            "Computer Hardware",
+            "Computer Software",
+            "Consulting",
+            "Consumer Electronice",
+            "Consumer Products",
+            "Education",
+            "Energy and Utilities",
+            "Entertainment and Sports",
+            "Health Care",
+            "Hospitality and Tourism",
+            "Human Resources",
+            "Insaurance",
+            "Internet and New Media",
+            "Investment Banking",
+            "Journalism and Publishing",
+            "Law",
+            "Manufacturing",
+            "Milatary & Defense",
+            "Mutual Funds and Brokerage",
+            "Non-Profit Government",
+            "Other",
+            "Pharmaceuticals and Biotech",
+            "Real Estate",
+            "Retail",
+            "Retail Banking",
+            "Telecommunications",
+            "Transportation",
+            "Venture Capital"
+        ])
+        .value("EDUCATION_AREAS", [
+            "Accounting",
+            "Agriculture",
+            "Art",
+            "Business",
+            "Communication",
+            "Computer Science",
+            "Economics",
+            "Education",
+            "Engineering",
+            "Finance",
+            "Health or Medical",
+            "Law",
+            "Liberal Arts and Humanities",
+            "Marketing",
+            "Operations",
+            "Political Science",
+            "Social and Math",
+            "Other"
+        ]);
+}());
+
 (function() {
     'use strict';
 
@@ -442,91 +501,6 @@
                 }
             }
         });
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminRankings', AdminRankings);
-     AdminRankings.$inject = ['schoolsService', '$rootScope'];
-    function AdminRankings(schoolsService, $rootScope) {
-
-        var vm = this;
-
-        vm.searchQuery = '';
-
-        vm.data = [];
-
-        init();
-
-        vm.getRankStatus = getRankStatus;
-
-        function getRankStatus (status) {
-            var ret = '';
-            if (status === 'up') {
-                ret = 'up green';
-            } else if (status === 'down') {
-                ret = 'down red';
-            } else {
-                ret = 'minus yellow';
-            }
-            return ret;
-        }
-
-        function init() {
-            $rootScope.isLoading = true;
-            schoolsService.rest.query(function(schools) {
-                debugger;
-                vm.data = schools;
-                $rootScope.isLoading = false;
-            });
-        }
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminRankingsRouter);
-
-    AdminRankingsRouter.$inject = ['$stateProvider'];
-    function AdminRankingsRouter($stateProvider) {
-        $stateProvider.state('adminRankings', {
-            parent: 'admindashboard',
-            url: '/rankings',
-            views: {
-                'adminContent': {
-                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
-                    controller: 'AdminRankings',
-                    controllerAs: 'adminRankings'
-                }
-            }
-        });
-    }
-
-}());
-
-(function () {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('adminRankingsSvc', adminRankingsSvc);
-
-    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
-
-    function adminRankingsSvc(BASE_URL, $resource) {
-        var rankingsResource = $resource(BASE_URL + '');
-
-        return {
-            rest: rankingsResource
-        }
     }
 
 }());
@@ -866,6 +840,91 @@
 
     angular
         .module('mba-deadlines')
+        .controller('AdminRankings', AdminRankings);
+     AdminRankings.$inject = ['schoolsService', '$rootScope'];
+    function AdminRankings(schoolsService, $rootScope) {
+
+        var vm = this;
+
+        vm.searchQuery = '';
+
+        vm.data = [];
+
+        init();
+
+        vm.getRankStatus = getRankStatus;
+
+        function getRankStatus (status) {
+            var ret = '';
+            if (status === 'up') {
+                ret = 'up green';
+            } else if (status === 'down') {
+                ret = 'down red';
+            } else {
+                ret = 'minus yellow';
+            }
+            return ret;
+        }
+
+        function init() {
+            $rootScope.isLoading = true;
+            schoolsService.rest.query(function(schools) {
+                debugger;
+                vm.data = schools;
+                $rootScope.isLoading = false;
+            });
+        }
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminRankingsRouter);
+
+    AdminRankingsRouter.$inject = ['$stateProvider'];
+    function AdminRankingsRouter($stateProvider) {
+        $stateProvider.state('adminRankings', {
+            parent: 'admindashboard',
+            url: '/rankings',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
+                    controller: 'AdminRankings',
+                    controllerAs: 'adminRankings'
+                }
+            }
+        });
+    }
+
+}());
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminRankingsSvc', adminRankingsSvc);
+
+    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminRankingsSvc(BASE_URL, $resource) {
+        var rankingsResource = $resource(BASE_URL + '');
+
+        return {
+            rest: rankingsResource
+        }
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
         .controller('AdminStats', AdminStatsController);
     //AdminStatsController.$inject = ['$scope'];
     function AdminStatsController() {
@@ -962,12 +1021,13 @@
         .module('mba-deadlines')
         .controller('SUEducation', EducationController);
 
-    EducationController.$inject = ['$state', '$rootScope', '$cookies', '$scope', 'userService'];
-    function EducationController($state, $rootScope, $cookies, $scope, userService) {
+    EducationController.$inject = ['$state', '$rootScope', '$cookies', '$scope', 'userService', 'EDUCATION_AREAS'];
+    function EducationController($state, $rootScope, $cookies, $scope, userService, EDUCATION_AREAS) {
         $rootScope.isLoading = false;
         var vm = this;
 
         vm.education = {};
+        vm.educationAreas = EDUCATION_AREAS;
 
         vm.isValid = false;
         vm.addEducation = addEducation;
@@ -998,7 +1058,6 @@
             if (vm.isValid) {
                 userService.data.update({'id': $cookies.get('auth')}, {"education": vm.education}, function (argument) {
                     ohSnap(argument.Success, 'Green');
-                    debugger;
                     $rootScope.isLoading = false;
                     $state.go(state);
                 })
@@ -1008,7 +1067,6 @@
         }
 
         function init () {
-            debugger;
             $('.ug-major.dropdown').dropdown({
                 onChange: function (val) {
                     vm.education.major = val;
@@ -1017,6 +1075,7 @@
         }
     }
 }());
+
 (function() {
     "use strict";
 
@@ -1144,7 +1203,6 @@
 
 }());
 
-
 (function () {
     'use strict';
 
@@ -1152,12 +1210,13 @@
         .module('mba-deadlines')
         .controller('SUWorkExperience', WorkExperienceController);
 
-    WorkExperienceController.$inject = ['$state', '$rootScope', '$cookies', '$scope', 'userService'];
-    function WorkExperienceController($state, $rootScope, $cookies, $scope, userService) {
+    WorkExperienceController.$inject = ['$state', '$rootScope', '$cookies', '$scope', 'userService', 'MBA_INDUSTRIES'];
+    function WorkExperienceController($state, $rootScope, $cookies, $scope, userService, MBA_INDUSTRIES) {
         $rootScope.isLoading = false;
         var vm = this;
 
         vm.workExperience = {};
+        vm.industries = MBA_INDUSTRIES;
 
         vm.isValid = false;
         vm.addWorkExperience = addWorkExperience;
@@ -1213,6 +1272,7 @@
         }
     }
 }());
+
 (function() {
     'use strict';
 
@@ -1988,7 +2048,6 @@
                     $rootScope.isLoading = false;
                     $state.go('step2');
                 }, function (obj) {
-                    debugger;
                     ohSnap(obj.data.error, 'Red');
                     $rootScope.isLoading = false;
                 });
@@ -1996,7 +2055,6 @@
                 ohSnap('Incomplete Data', 'Red');
                 $rootScope.isLoading = false;
             }
-            debugger;
         }
 
         function init() {
@@ -2084,6 +2142,135 @@
                     templateUrl: 'components/signup/signup.tpl.html',
                     controller: 'Signup',
                     controllerAs: 'su'
+                }
+            }
+        });
+    }
+
+}());
+
+
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('Profile', ProfileController);
+
+    ProfileController.$inject = ['$scope','$cookies', 'userService', 'EDUCATION_AREAS', 'MBA_INDUSTRIES'];
+    function ProfileController($scope, $cookies, userService, EDUCATION_AREAS, MBA_INDUSTRIES) {
+        var vm = this;
+
+        // Exposed Variables
+        vm.user = {};
+        vm.educationAreas = EDUCATION_AREAS;
+        vm.industries = MBA_INDUSTRIES;
+        vm.isLoading = false;
+        vm.p1 = '';
+        $scope.p2 = '';
+        vm.pwValidity = false;
+
+        // Exposed Functions
+        vm.updateData = function () {
+            vm.isLoading = true;
+            userService.data.update({'id': $cookies.get('auth')}, vm.user).$promise.then(function () {
+                vm.isLoading = false;
+                ohSnap('Record Updated', 'Green');
+            });
+        };
+
+        $scope.$watch('p2', function(nv, ov) {
+            if (nv) {
+                if (vm.p1 === nv) {
+                    vm.pwValidity = true;
+                } else {
+                    vm.pwValidity = false;
+                }
+            } else {
+                vm.pwValidity = false;
+            }
+        });
+
+        vm.changePassword = function () {
+            vm.isLoading = true;
+            userService.data.update({'id': $cookies.get('auth')}, {'password': vm.p1}).$promise.then(function () {
+                vm.p1 = '';
+                $scope.p2 = '';
+                vm.isLoading = false;
+                ohSnap('Password Changed', 'Green');
+            });
+        }
+
+        init();
+        function init() {
+            vm.isLoading = true;
+            userService.data.get({id: $cookies.get('auth')}).$promise.then(function (data) {
+                vm.user = data;
+                if (vm.user.dob) {
+                    vm.user.dob = new Date(vm.user.dob);
+                }
+                if (vm.user.student_profile.gat.dateTaken) {
+                    vm.user.student_profile.gat.dateTaken = new Date(vm.user.student_profile.gat.dateTaken);
+                }
+                if (vm.user.student_profile.gre.dateTaken) {
+                    vm.user.student_profile.gre.dateTaken = new Date(vm.user.student_profile.gre.dateTaken);
+                }
+                delete vm.user._id;
+                // Salutation Dropdown
+                $('.salutation.ui.dropdown').dropdown({
+                    onChange: function(text, value) {
+                        vm.user.salutation = value;
+                    }
+                }).dropdown('set selected', vm.user.salutation);
+
+
+                $('.country.ui.dropdown').dropdown({
+                    onChange: function(text, value) {
+                        vm.user.country = value;
+                    }
+                }).dropdown('set selected', vm.user.country);
+
+                $('.pre.ui.dropdown').dropdown({
+                    onChange: function(text, value) {
+                        vm.user.work_experience.pre_mba = value;
+                    }
+                }).dropdown('set selected', vm.user.work_experience.pre_mba);
+
+                $('.post.ui.dropdown').dropdown({
+                    onChange: function(text, value) {
+                        vm.user.work_experience.post_mba = value;
+                    }
+                }).dropdown('set selected', vm.user.work_experience.post_mba);
+
+                $('.ug-major.ui.dropdown').dropdown({
+                    onChange: function(text, value) {
+                        vm.user.education.major = value;
+                    }
+                }).dropdown('set selected', vm.user.education.major);
+                vm.isLoading = false;
+            });
+        }
+    }
+} ());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(userProfileRouter);
+
+    userProfileRouter.$inject = ['$stateProvider'];
+    function userProfileRouter($stateProvider) {
+        $stateProvider.state('userProfile', {
+            parent: 'index',
+            url: '/profile',
+            views: {
+                'content@': {
+                    templateUrl: 'components/user-profile/user-profile.tpl.html',
+                    controller: 'Profile',
+                    controllerAs: 'profile'
                 }
             }
         });

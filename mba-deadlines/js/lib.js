@@ -43647,7 +43647,7 @@ null!=b?(this.container.focus(),h.defer(function(a){return function(){var c,d,e,
 function ohSnap(text, color, icon) {
     var icon_markup = "",
         html,
-        time = '5000',
+        time = '125000',
         $container = $('#ohsnap');
 
     if (icon) {
