@@ -373,58 +373,6 @@
         ]);
 }());
 
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminLogin', AdminLogin);
-
-    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
-    function AdminLogin(adminService, $cookies, $state) {
-        var vm = this;
-
-        vm.email = '';
-        vm.password = '';
-
-        vm.authenticate = function () {
-            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
-                if (admin) {
-                    $cookies.put('admin', admin._id);
-                    $state.go('admindashboard');
-                } else {
-                    ohSnap('Email/Password not valid', 'red');
-                }
-            });
-        };
-    }
-}());
-
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(dashboardRouter);
-
-    dashboardRouter.$inject = ['$stateProvider'];
-    function dashboardRouter($stateProvider) {
-        $stateProvider.state('admin-login', {
-            parent: 'index',
-            url: '/admin-login',
-            data: {noNavbar: true},
-            views: {
-                'content@': {
-                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
-                    controller: 'AdminLogin',
-                    controllerAs: 'adminLogin'
-                }
-            }
-        });
-    }
-
-}());
-
 (function() {
     'use strict';
 
@@ -614,6 +562,58 @@
         return {
             rest: rankingsResource
         }
+    }
+
+}());
+
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminLogin', AdminLogin);
+
+    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
+    function AdminLogin(adminService, $cookies, $state) {
+        var vm = this;
+
+        vm.email = '';
+        vm.password = '';
+
+        vm.authenticate = function () {
+            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
+                if (admin) {
+                    $cookies.put('admin', admin._id);
+                    $state.go('admindashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+        };
+    }
+}());
+
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(dashboardRouter);
+
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('admin-login', {
+            parent: 'index',
+            url: '/admin-login',
+            data: {noNavbar: true},
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
+                    controller: 'AdminLogin',
+                    controllerAs: 'adminLogin'
+                }
+            }
+        });
     }
 
 }());
