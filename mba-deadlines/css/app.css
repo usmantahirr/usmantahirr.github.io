@@ -414,3 +414,13 @@ a {
   padding: 5px;
   border-radius: 5px;
 }
+
+section.tzPickerSection {
+  position: absolute;
+  top: 78px;
+  z-index: 2;
+  right: 16%;
+}
+section.tzPickerSection .ui.selection.dropdown {
+  width: 320px !important;
+}

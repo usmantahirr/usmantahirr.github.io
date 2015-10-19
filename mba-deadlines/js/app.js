@@ -2,7 +2,7 @@
     'use strict';
 
     angular
-        .module('mba-deadlines', ['ngResource', 'ui.router', 'ngSanitize', 'ngCookies', 'ngQuill'])
+        .module('mba-deadlines', ['ngResource', 'ui.router', 'ngSanitize', 'ngCookies', 'ngQuill', 'flow', 'ngCsvImport'])
         .run(runBlock)
         .config(indexConfig);
 
@@ -13,6 +13,8 @@
         $rootScope.authorized = false;
         $rootScope.admin = false;
         $rootScope.hideNavbar = false;
+        $rootScope.tz = '';
+        $rootScope.state = $state;
 
         $rootScope.$on('$stateChangeStart', function (event, toState, toStateParams) {
             if (toState.redirectTo) {
@@ -34,7 +36,6 @@
                 $rootScope.admin = true;
             }
         });
-
         $rootScope.$on('$stateChangeSuccess', function (event, toState, toStateParams) {
             if (toState.data) {
 
@@ -58,6 +59,13 @@
                         $state.go('landing-page');
                     }
                 }
+            }
+        });
+
+        $('#timezonePicker').timezones().dropdown({
+            onChange: function (value) {
+                $rootScope.tz = value;
+                $rootScope.$apply();
             }
         });
     }
@@ -106,6 +114,26 @@
         })
 }());
 
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .filter('tzDate', timeZoneFilter);
+
+    timeZoneFilter.$inject = [];
+
+    function timeZoneFilter($scope) {
+        return function(input, tz) {
+            var date = moment(input, "MMM DD YYYY hh:mmA Z");
+            if (date.toString() === "Invalid date") {
+                return "N/A";
+            }
+            return date.tz(tz).format('MMM DD, YYYY hh:mmA');
+        }
+    }
+
+}());
 (function () {
     'use strict';
 
@@ -202,7 +230,7 @@
     angular
         .module('mba-deadlines')
        //.value('BASE_URL', 'http://localhost:3000');
-     .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
+      .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
 }());
 
 (function() {
@@ -345,6 +373,58 @@
         ]);
 }());
 
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .controller('AdminLogin', AdminLogin);
+
+    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
+    function AdminLogin(adminService, $cookies, $state) {
+        var vm = this;
+
+        vm.email = '';
+        vm.password = '';
+
+        vm.authenticate = function () {
+            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
+                if (admin) {
+                    $cookies.put('admin', admin._id);
+                    $state.go('admindashboard');
+                } else {
+                    ohSnap('Email/Password not valid', 'red');
+                }
+            });
+        };
+    }
+}());
+
+(function () {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(dashboardRouter);
+
+    dashboardRouter.$inject = ['$stateProvider'];
+    function dashboardRouter($stateProvider) {
+        $stateProvider.state('admin-login', {
+            parent: 'index',
+            url: '/admin-login',
+            data: {noNavbar: true},
+            views: {
+                'content@': {
+                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
+                    controller: 'AdminLogin',
+                    controllerAs: 'adminLogin'
+                }
+            }
+        });
+    }
+
+}());
+
 (function() {
     'use strict';
 
@@ -453,58 +533,6 @@
 
 }());
 
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminLogin', AdminLogin);
-
-    AdminLogin.$inject = ['adminService', '$cookies', '$state'];
-    function AdminLogin(adminService, $cookies, $state) {
-        var vm = this;
-
-        vm.email = '';
-        vm.password = '';
-
-        vm.authenticate = function () {
-            adminService.rest.save({email: vm.email, password: vm.password}, function (admin) {
-                if (admin) {
-                    $cookies.put('admin', admin._id);
-                    $state.go('admindashboard');
-                } else {
-                    ohSnap('Email/Password not valid', 'red');
-                }
-            });
-        };
-    }
-}());
-
-(function () {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(dashboardRouter);
-
-    dashboardRouter.$inject = ['$stateProvider'];
-    function dashboardRouter($stateProvider) {
-        $stateProvider.state('admin-login', {
-            parent: 'index',
-            url: '/admin-login',
-            data: {noNavbar: true},
-            views: {
-                'content@': {
-                    templateUrl: 'components/admin-dashboard/admin-login/admin-login.tpl.html',
-                    controller: 'AdminLogin',
-                    controllerAs: 'adminLogin'
-                }
-            }
-        });
-    }
-
-}());
-
 (function() {
     'use strict';
 
@@ -596,9 +624,9 @@
     angular
         .module('mba-deadlines')
         .controller('AdminSchools', AdminSchoolsController);
-    AdminSchoolsController.$inject = ['schoolsService', '$http', 'BASE_URL', '$rootScope', '$scope', 'adminSchoolsSvc'];
+    AdminSchoolsController.$inject = ['schoolsService', '$http', 'BASE_URL', '$rootScope', '$scope', 'adminSchoolsSvc', 'flowFactory'];
 
-    function AdminSchoolsController(schoolsService, $http, BASE_URL, $rootScope, $scope, adminSchoolsSvc) {
+    function AdminSchoolsController(schoolsService, $http, BASE_URL, $rootScope, $scope, adminSchoolsSvc, flowFactory) {
 
         // Local Variables
         var vm = this,
@@ -626,17 +654,33 @@
         vm.selectedSchool = {};
         vm.mode = '';
 
+        $scope.csv = {
+            content: null,
+            header: true,
+            headerVisible: true,
+            separator: ',',
+            separatorVisible: true,
+            result: null,
+            encoding: 'ISO-8859-1',
+            encodingVisible: true,
+        };
+
+        vm.showCSV = function () {
+            $('.csv.ui.modal').modal('show');
+        };
+
         // Exposed Functions
         vm.delete = deleteSchool;
         vm.showSchool = showSchool;
         vm.addSchool = addSchool;
         vm.updateSchool = updateSchool;
 
-        vm.activeTab = 'school'; // school | cp
+        vm.activeTab = 'school'; // school | cp | iu
 
         vm.addEssay = addTempEssay;
         vm.acceptEssay = pushTempEssay;
         vm.discardEssay = discardTempEssay;
+        vm.flowFile = flowFactory.create();
 
         function initController () {
             $rootScope.isLoading = true;
@@ -702,6 +746,9 @@
                 vm.selectedSchool = school;
                 vm.mode = 'Edit';
 
+                //debugger;
+                vm.imageExistance = vm.selectedSchool.icon.length > 50;
+
                 $('.country.ui.dropdown').dropdown({
                     onChange: function (code, country) {
                         updateCountry(code, country);
@@ -716,6 +763,7 @@
 
 
             } else if (mode === 'add') {
+                vm.flowFile.files = [];
                 vm.selectedSchool = {
                     class_profile: classProfile
                 };
@@ -762,6 +810,7 @@
 
         // POST Request for adding new school
         function addSchool() {
+            vm.selectedSchool.icon = $('[flow-img]').attr('src');
             adminSchoolsSvc.rest.save(vm.selectedSchool, function () {
                 refreshPage();
                 ohSnap('Record Added', 'Green');
@@ -770,6 +819,7 @@
 
         // PUT Requiest for updating already existed school
         function updateSchool() {
+            vm.selectedSchool.icon = $('[flow-img]').attr('src');
             adminSchoolsSvc.rest.update({'school_id': vm.selectedSchool._id},vm.selectedSchool, function (obj) {
                 refreshPage();
                 ohSnap(obj.Success, 'Green');
@@ -861,6 +911,8 @@
             vm.tempEssayFlag = false;
             vm.tempEssay = {};
             vm.activeTab = 'school';
+            vm.flowFile.files = [];
+            vm.imageExistance = false;
             $('.ui.dropdown').dropdown('clear');
             $('.country.ui.dropdown').dropdown('clear');
             $('.state.ui.dropdown').dropdown('clear');
@@ -1340,9 +1392,9 @@
     angular
         .module('mba-deadlines')
         .controller('Dashboard', DashboardController);
-    DashboardController.$inject = ['$scope', 'schoolsService', 'userService', '$cookies', '$http', 'BASE_URL'];
+    DashboardController.$inject = ['$scope', 'schoolsService', '$rootScope', '$cookies', '$http', 'BASE_URL'];
 
-    function DashboardController($scope, schoolsService, userService, $cookies, $http, BASE_URL) {
+    function DashboardController($scope, schoolsService, $rootScope, $cookies, $http, BASE_URL) {
 
         // Local Variables
         var vm = this;
@@ -1351,6 +1403,15 @@
         // Sort Details
         vm.sortType = 'school'; // set the default sort type
         vm.sortReverse = false;  // set the default sort order
+
+        $rootScope.tz = $('#timezonePicker').val();
+
+        vm.timezoneChanged = function () {
+        };
+        function init () {
+            $('#timezone').timezones();
+        }
+        init();
 
         // Exposed Variables
         /**
@@ -1607,7 +1668,6 @@
                 vm.isLoading = false;
             });
         }
-
         $scope.$on('LastElem', function(event){
             $('.action-group .trophy').popup({
                 title: 'Class Profile',
@@ -1744,8 +1804,8 @@
         .module('mba-deadlines')
         .controller('Deadlines', DeadlinesController);
 
-    DeadlinesController.$inject = ['schoolsService', '$scope'];
-    function DeadlinesController(schoolsService, $scope) {
+    DeadlinesController.$inject = ['schoolsService', '$rootScope'];
+    function DeadlinesController(schoolsService, $rootScope) {
 
         // Local Variables
         var vm = this;
@@ -1762,6 +1822,7 @@
         vm.selectRound = selectRound;
         vm.isSelected = isSelected;
         vm.isLoading = false;
+        $rootScope.tz = $('#timezonePicker').val();
 
         // Sort Details
         vm.sortType = 'school'; // set the default sort type
