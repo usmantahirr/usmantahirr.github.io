@@ -2,21 +2,21 @@
     <head>
         <title> MBA Deadlines </title>
         <link rel="stylesheet" type="text/css" href="css/app.css">
-  
+
         <link rel="stylesheet" href="css/vendor.css"/>
     </head>
 
     <body ng-app="mba-deadlines" style="background:#f2f2f2;">
         <nav ui-view="navigation" ng-hide="admin===true || hideNavbar === true"></nav>
 
-        <section class="tzPickerSection" ng-show="state.includes('dashboard') || state.includes('deadlines')">
+        <section class="tzPickerSection" ng-show="(state.includes('dashboard') && !state.includes('user-essay') )|| state.includes('deadlines')">
             <select class="ui search dropdown" id="timezonePicker">
             </select>
         </section>
 
         <section ui-view="content"></section>
         <footer></footer>
-    </body> 
+    </body>
     <div id="ohsnap" style="z-index: 20;"></div>
 
     <script src="js/lib.js"></script>

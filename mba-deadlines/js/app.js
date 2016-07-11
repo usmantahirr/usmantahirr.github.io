@@ -229,7 +229,7 @@
 (function () {
     angular
         .module('mba-deadlines')
-       //.value('BASE_URL', 'http://localhost:3000');
+    //    .value('BASE_URL', 'http://localhost:3000');
       .value('BASE_URL', 'http://mbadeadlines.herokuapp.com');
 }());
 
@@ -298,6 +298,9 @@
         var userResource = $resource(BASE_URL + '/auth', {}, {
             post: {
                 'method': 'POST'
+            },
+            update: {
+                'method': 'PUT'
             }
         });
         var userData = $resource(BASE_URL + '/users/:id', {}, {
@@ -395,6 +398,7 @@
         vm.addSchool = addSchool;
         vm.selectRound = selectRound;
         vm.isSelected = isSelected;
+        $rootScope.tz = $('#timezonePicker').val();
 
         init();
 
@@ -420,7 +424,7 @@
         function init() {
             $rootScope.isLoading = true;
             schoolsService.rest.query(function(schools) {
-                processDates(schools);
+                //processDates(schools);
                 vm.data = schools;
                 $rootScope.isLoading = false;
             });
@@ -476,91 +480,6 @@
 
         return {
             rest: deadlinesResource
-        }
-    }
-
-}());
-
-(function() {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .controller('AdminRankings', AdminRankings);
-     AdminRankings.$inject = ['schoolsService', '$rootScope'];
-    function AdminRankings(schoolsService, $rootScope) {
-
-        var vm = this;
-
-        vm.searchQuery = '';
-
-        vm.data = [];
-
-        init();
-
-        vm.getRankStatus = getRankStatus;
-
-        function getRankStatus (status) {
-            var ret = '';
-            if (status === 'up') {
-                ret = 'up green';
-            } else if (status === 'down') {
-                ret = 'down red';
-            } else {
-                ret = 'minus yellow';
-            }
-            return ret;
-        }
-
-        function init() {
-            $rootScope.isLoading = true;
-            schoolsService.rest.query(function(schools) {
-                debugger;
-                vm.data = schools;
-                $rootScope.isLoading = false;
-            });
-        }
-    }
-}());
-
-(function() {
-    "use strict";
-
-    angular
-        .module('mba-deadlines')
-        .config(AdminRankingsRouter);
-
-    AdminRankingsRouter.$inject = ['$stateProvider'];
-    function AdminRankingsRouter($stateProvider) {
-        $stateProvider.state('adminRankings', {
-            parent: 'admindashboard',
-            url: '/rankings',
-            views: {
-                'adminContent': {
-                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
-                    controller: 'AdminRankings',
-                    controllerAs: 'adminRankings'
-                }
-            }
-        });
-    }
-
-}());
-
-(function () {
-    'use strict';
-
-    angular
-        .module('mba-deadlines')
-        .factory('adminRankingsSvc', adminRankingsSvc);
-
-    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
-
-    function adminRankingsSvc(BASE_URL, $resource) {
-        var rankingsResource = $resource(BASE_URL + '');
-
-        return {
-            rest: rankingsResource
         }
     }
 
@@ -977,6 +896,91 @@
 
     angular
         .module('mba-deadlines')
+        .controller('AdminRankings', AdminRankings);
+     AdminRankings.$inject = ['schoolsService', '$rootScope'];
+    function AdminRankings(schoolsService, $rootScope) {
+
+        var vm = this;
+
+        vm.searchQuery = '';
+
+        vm.data = [];
+
+        init();
+
+        vm.getRankStatus = getRankStatus;
+
+        function getRankStatus (status) {
+            var ret = '';
+            if (status === 'up') {
+                ret = 'up green';
+            } else if (status === 'down') {
+                ret = 'down red';
+            } else {
+                ret = 'minus yellow';
+            }
+            return ret;
+        }
+
+        function init() {
+            $rootScope.isLoading = true;
+            schoolsService.rest.query(function(schools) {
+                debugger;
+                vm.data = schools;
+                $rootScope.isLoading = false;
+            });
+        }
+    }
+}());
+
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(AdminRankingsRouter);
+
+    AdminRankingsRouter.$inject = ['$stateProvider'];
+    function AdminRankingsRouter($stateProvider) {
+        $stateProvider.state('adminRankings', {
+            parent: 'admindashboard',
+            url: '/rankings',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/admin-rankings/admin-rankings.tpl.html',
+                    controller: 'AdminRankings',
+                    controllerAs: 'adminRankings'
+                }
+            }
+        });
+    }
+
+}());
+
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('adminRankingsSvc', adminRankingsSvc);
+
+    adminRankingsSvc.$inject = ['BASE_URL', '$resource'];
+
+    function adminRankingsSvc(BASE_URL, $resource) {
+        var rankingsResource = $resource(BASE_URL + '');
+
+        return {
+            rest: rankingsResource
+        }
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
         .controller('AdminStats', AdminStatsController);
     //AdminStatsController.$inject = ['$scope'];
     function AdminStatsController() {
@@ -1063,6 +1067,57 @@
     	return {
     		rest: rankingsResource
     	}
+    }
+
+}());
+(function () {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .controller('ImportContent', importContentController);
+
+    function importContentController () {
+
+    }
+}());
+(function() {
+    "use strict";
+
+    angular
+        .module('mba-deadlines')
+        .config(importContent);
+
+    importContent.$inject = ['$stateProvider'];
+    function importContent($stateProvider) {
+        $stateProvider.state('import-content', {
+            parent: 'admindashboard',
+            url: '/import-content',
+            views: {
+                'adminContent': {
+                    templateUrl: 'components/admin-dashboard/import-content/import-content.tpl.html',
+                    controller: 'ImportContent',
+                    controllerAs: 'importContent'
+                }
+            }
+        });
+    }
+
+}());
+
+(function() {
+    'use strict';
+
+    angular
+        .module('mba-deadlines')
+        .factory('importContentSvc', importContentSvc);
+
+    importContentSvc.$inject = ['BASE_URL', '$resource'];
+
+    function importContentSvc (BASE_URL, $resource) {
+        return $resource(BASE_URL + '/import', {}, {
+            update: {method: 'PUT'}
+        });
     }
 
 }());
@@ -1467,12 +1522,16 @@
 
             if (vm.selectedRound === 1) {
                 temp.selectedRound = temp.roundOne;
+                temp.selectedRound.round = 1;
             } else if (vm.selectedRound === 2) {
                 temp.selectedRound = temp.roundTwo;
+                temp.selectedRound.round = 2;
             } else if (vm.selectedRound === 3) {
                 temp.selectedRound = temp.roundThree;
+                temp.selectedRound.round = 3;
             } else if (vm.selectedRound === 4) {
                 temp.selectedRound = temp.roundFour;
+                temp.selectedRound.round = 4;
             } else {
                 ohSnap('No Match Found', 'warning');
                 console.log('No Match Found');
@@ -1572,7 +1631,6 @@
                 onShow: function() {
                     addDropDown = $('.school-list.dropdown').dropdown({
                         onChange: function(school) {
-                            debugger;
                             vm.selectedSchool = school;
                         }
                     });
@@ -1762,6 +1820,18 @@
 
         initController();
 
+        vm.trimHtml = function (content) {
+            return $(content).text();
+        };
+
+        vm.countWords = function (content) {
+            var s = vm.trimHtml(content);
+            s = s.replace(/(^\s*)|(\s*$)/gi,'');
+            s = s.replace(/[ ]{2,}/gi,' ');
+            s = s.replace(/\n /,'\n');
+            return s.split(' ').length;
+        };
+
         function addEssay(essay) {
             vm.crudInProgress = true;
             essay.school_id = $stateParams.s_id;
@@ -1797,6 +1867,7 @@
 
     }
 }());
+
 (function () {
     'use strict';
 
@@ -1804,8 +1875,8 @@
         .module('mba-deadlines')
         .controller('Deadlines', DeadlinesController);
 
-    DeadlinesController.$inject = ['schoolsService', '$rootScope'];
-    function DeadlinesController(schoolsService, $rootScope) {
+    DeadlinesController.$inject = ['schoolsService', '$rootScope', '$cookies'];
+    function DeadlinesController(schoolsService, $rootScope, $cookies) {
 
         // Local Variables
         var vm = this;
@@ -1814,7 +1885,7 @@
         vm.searchQuery = '';
         vm.data = [];
         vm.selectedSchool = {};
-        vm.selectedRoud = '';
+        vm.selectedRound = '';
 
         // Exposed Functions
         vm.addHover = addHover;
@@ -1830,37 +1901,92 @@
 
         init();
 
+        vm.checkExistance = function (schoolId) {
+            for (var index in vm.bookmarkedSchools) {
+                if (vm.bookmarkedSchools[index].school_id === schoolId) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
         // Function Definitions
         function addHover(deadline) {
             // Shows/hides the add button on hover
             return deadline.showAdd = !deadline.showAdd;
         }
 
+        function bookMarkRound() {
+            var temp = vm.selectedSchool;
+
+            if (vm.selectedRound === 1) {
+                temp.selectedRound = temp.roundOne;
+                temp.selectedRound.round = 1;
+            } else if (vm.selectedRound === 2) {
+                temp.selectedRound = temp.roundTwo;
+                temp.selectedRound.round = 2;
+            } else if (vm.selectedRound === 3) {
+                temp.selectedRound = temp.roundThree;
+                temp.selectedRound.round = 3;
+            } else if (vm.selectedRound === 4) {
+                temp.selectedRound = temp.roundFour;
+                temp.selectedRound.round = 4;
+            } else {
+                ohSnap('No Match Found', 'warning');
+                console.log('No Match Found');
+            }
+
+            if (temp) {
+                temp.user_id = $cookies.get('auth');
+            }
+
+            schoolsService.bookmarks.save(temp, function(obj) {
+                vm.bookmarkedSchools.push(obj);
+                ohSnap(temp.school + ' bookmarked', 'green');
+            }, function(error) {
+                ohSnap('Fail: ' + error.toString(), 'red');
+            });
+        }
+
         function addSchool(school) {
             vm.selectedSchool = school;
-            $('.uni-details-modal.ui.modal')
-                .modal({
-                    onHide: function () {
-                        vm.selectedRoud = '';
-                    }
-                })
-                .modal('show');
+            $('.deadline-uni-details-modal.ui.modal').modal({
+                onHide: function () {
+                    vm.selectedRound = '';
+                },
+                 onApprove: function() {
+                    bookMarkRound();
+                }
+            })
+            .modal('show');
         }
 
         function selectRound(round) {
-            vm.selectedRoud = round;
+            vm.selectedRound = round;
         }
 
         function isSelected(round) {
-            return vm.selectedRoud === round;
+            return vm.selectedRound === round;
         }
 
         function init() {
             vm.isLoading = true;
-            schoolsService.rest.query(function (schools) {
-                vm.data = schools;
-                vm.isLoading = false;
+            schoolsService.bookmarks.get({ user_id: $cookies.get('auth') }, function (object) {
+                vm.bookmarkedSchools = object;
+
+                schoolsService.rest.query(function (schools) {
+                    vm.data = schools;
+                    vm.isLoading = false;
+                }, function (error) {
+                    ohSnap('FAIL: Schools not loaded, please reload page', 'red');
+                    console.log(error);
+                });
+
+            }, function (error) {
+                ohSnap('Fail: Bookmarks not loaded, please reload page', 'red');
+                console.log(error);
             });
+
         }
 
     }
@@ -1956,6 +2082,12 @@
         vm.auth = login;
 
         function login() {
+
+            userService.rest.post({email: vm.email, password: vm.password}).$promise.then(function (data) {
+                vm.email = data.email;
+            }).catch(function (error) {
+
+            } );
 
             userService.rest.post({email: vm.email, password: vm.password}, function (obj) {
                 if (obj._id) {

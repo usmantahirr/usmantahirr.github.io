@@ -94,7 +94,7 @@ a {
 }
 
 .dashboard-container {
-  width: 70%;
+  width: 85%;
   margin: 25px auto;
 }
 
@@ -143,6 +143,11 @@ a {
 .essay .body {
   height: 250px;
   border: 1px solid lightgray;
+  position: relative;
+}
+.essay .body .word-count {
+  position: absolute;
+  bottom: -25px;
 }
 .essay .required {
   font-size: 22px;
@@ -179,7 +184,7 @@ a {
 }
 
 .deadlines-container {
-  width: 70%;
+  width: 85%;
   margin: 25px auto;
 }
 .deadlines-container table th {
@@ -205,7 +210,7 @@ a {
 }
 
 .rankings-container {
-  width: 70%;
+  width: 85%;
   margin: 25px auto;
 }
 .rankings-container table th {
@@ -330,7 +335,7 @@ a {
 }
 
 .profile-container {
-  width: 70%;
+  width: 85%;
   margin: 25px auto;
 }
 .profile-container .profile-actions {
@@ -419,7 +424,7 @@ section.tzPickerSection {
   position: absolute;
   top: 78px;
   z-index: 2;
-  right: 16%;
+  right: 9%;
 }
 section.tzPickerSection .ui.selection.dropdown {
   width: 320px !important;
